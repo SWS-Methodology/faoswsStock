@@ -7,5 +7,5 @@
 ##' 
 
 getStockData = function(){
-    read.csv("~/Documents/Github/faoswsStock/sandbox/Data/usaStockVariabilityFAOSTAT.csv")
+    fread("~/Documents/Github/faoswsStock/sandbox/Data/usaStockVariabilityFAOSTAT.csv")
 }

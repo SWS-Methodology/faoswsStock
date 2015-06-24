@@ -9,12 +9,17 @@
 ##' the previous cumulative drawdowns/inputs, will be normal with some mean and
 ##' variance estimated from this model.
 ##' 
-##' @param
-##' @param
+##' @param data
+##' @param valueColumn
+##' @param groupingColumns
 ##' 
 ##' @return 
 ##' 
 
-buildStockModel = function(){
+buildStockModel = function(data, valueColumn = "Value",
+                           groupingColumns = c("AreaCode", "ItemCode")){
+    ## Input Checks
     
+    ## Estimate variance within each group to scale the model
+    data[, Variance := var(get(valueColumn)), by = groupingColumns]
 }
