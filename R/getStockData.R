@@ -7,5 +7,15 @@
 ##' 
 
 getStockData = function(){
-    fread("~/Documents/Github/faoswsStock/sandbox/Data/usaStockVariabilityFAOSTAT.csv")
+    ## Check if on server or not:
+    if(exists("DEBUG_MODE") && DEBUG_MODE == FALSE){
+        R_SWS_SHARE_PATH = Sys.getenv("R_SWS_SHARE_PATH")
+        out = fread(paste0(R_SWS_SHARE_PATH, "/browningj/stock/usaStockVariabilityFAOSTAT.csv"))
+    } else if(Sys.info()[7] == "josh"){
+        out = fread("~/Documents/Github/faoswsStock/sandbox/Data/usaStockVariabilityFAOSTAT.csv")
+    } else {
+        stop("No directory set up for this user yet!")
+    }
+    out = out[ItemCode <= 2520, ] # Cereals
+    return(out)
 }
