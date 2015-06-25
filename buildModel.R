@@ -38,7 +38,6 @@ if(!exists("DEBUG_MODE") || DEBUG_MODE == ""){
 
 data = getStockData()
 model = buildStockModel(data = data)
-cat(paste0(R_SWS_SHARE_PATH, "stockModel", gsub("(- :)", ".", Sys.time()), ".RData"))
 save(model, file = paste0(R_SWS_SHARE_PATH, "stockModel",
-                          gsub("(- :)", ".", Sys.time()), ".RData"))
+                          gsub("(-| |:)", ".", Sys.time()), ".RData"))
                           
