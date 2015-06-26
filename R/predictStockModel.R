@@ -22,25 +22,35 @@ predictStockModel = function(model, newdata){
     stopifnot(names(model) == c("model", "yearColumn", "valueColumn",
                                 "groupingColumns", "cumulativeYears"))
     stopifnot(is(newdata, "data.table"))
-    stopifnot(model$yearColumn %in% colnames(data))
-    stopifnot(model$valueColumn %in% colnames(data))
-    stopifnot(model$groupingColumns %in% colnames(data))
+    stopifnot(model$yearColumn %in% colnames(newdata))
+    stopifnot(model$valueColumn %in% colnames(newdata))
+    stopifnot(model$groupingColumns %in% colnames(newdata))
 
     ## Estimate variance within each group and scale the values
-    newdata[, Variance := var(get(model$valueColumn)),
+    newdata[, Variance := var(get(model$valueColumn), na.rm = TRUE),
             by = c(model$groupingColumns)]
     newdata[, scaledValue := get(model$valueColumn) / sqrt(Variance)]
     ## For cumulative calcs, we need to ensure we've ordered the data by year. 
     ## Since we do calcs within each grouping variable, we don't need to worry
     ## about sorting by them too.
-    newdata = data[order(get(model$yearColumn)), ]
+    newdata = newdata[order(get(model$yearColumn)), ]
     ## Compute the cumulative stock changes.  For the first cumulativeYears
     ## values, we won't have any available data.  Then, rollsumr will give us
     ## the values we need, but the last observation it provides will be the sum
     ## of the last cumulativeYears observations.  We don't need this one, so we
-    ## use .N+1 to throw it out.
-    newdata[, cumulativeStock := c(rep(NA, model$cumulativeYears),
-            zoo::rollsumr(scaledValue, k = model$cumulativeYears))[-(.N+1)],
+    ## throw it out.
+    ## 
+    ## First, wrap rollsumr to avoid errors and return the same length
+    rollsumr = function(x, k, ...){
+        if(length(x) >= k){
+            out = zoo::rollsumr(x, k, ...)
+            out = c(rep(NA, k), out[-length(out)])
+            return(out)
+        } else {
+            return(rep(NA_real_, length(x)))
+        }
+    }
+    newdata[, cumulativeStock := rollsumr(scaledValue, k = model$cumulativeYears),
          by = c(model$groupingColumns)]
     
     out = predict(model$model, newdata = newdata, se.fit = TRUE)
