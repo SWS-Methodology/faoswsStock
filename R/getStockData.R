@@ -13,6 +13,8 @@ getStockData = function(){
         out = fread(paste0(R_SWS_SHARE_PATH, "/browningj/stock/usaStockVariabilityFAOSTAT.csv"))
     } else if(Sys.info()[7] == "josh"){
         out = fread("~/Documents/Github/faoswsStock/sandbox/Data/usaStockVariabilityFAOSTAT.csv")
+    } else if(Sys.info()[7] == "rockc_000"){
+        out = fread("~/Github/faoswsStock/sandbox/Data/usaStockVariabilityFAOSTAT.csv")
     } else {
         stop("No directory set up for this user yet!")
     }

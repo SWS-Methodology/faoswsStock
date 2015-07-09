@@ -37,7 +37,7 @@ if(!exists("DEBUG_MODE") || DEBUG_MODE == ""){
 }
 
 data = getStockData()
-model = buildStockModel(data = data)
+model = buildStockModel(data = data, cumulativeYears = 10)
 currentSession = sessionInfo()
 save(model, currentSession,
      file = paste0(R_SWS_SHARE_PATH, "stockModel",
