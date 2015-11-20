@@ -12,7 +12,7 @@
 ##'   prediction.  If not provided, prediction is performed on the data used to
 ##'   fit the model.
 ##'   
-##' @return
+##' @return A data.table object with the predictions.
 ##' 
 
 predictStockModel = function(model, newdata){
