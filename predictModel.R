@@ -24,7 +24,7 @@ if(!exists("DEBUG_MODE") || DEBUG_MODE == ""){
     ## Define directories
     if(Sys.info()[7] == "josh"){
         apiDirectory = "~/Documents/Github/faoswsStock/R/"
-        R_SWS_SHARE_PATH = "~/Documents/Github/faoswsStock/savedModels/"
+        R_SWS_SHARE_PATH = "/media/hqlprsws1_qa/browningj/stock"
     }
     if(Sys.info()[7] == "rockc_000"){ #Josh's laptop
         apiDirectory = "~/Github/faoswsStock/R/"
@@ -32,11 +32,12 @@ if(!exists("DEBUG_MODE") || DEBUG_MODE == ""){
     }
 
     ## Get SWS Parameters
+    SetClientFiles("~/R certificate files/QA")
     GetTestEnvironment(
-        baseUrl = "https://hqlprswsas1.hq.un.fao.org:8181/sws",
-        token = "59202d09-d085-41bc-8736-13ac5533e669"
-        ## baseUrl = "https://hqlqasws1.hq.un.fao.org:8181/sws",
-        ## token = "90bb0f92-e345-4401-945d-1e43af801167"
+        baseUrl = "https://hqlqasws1.hq.un.fao.org:8181/sws",
+        token = "3ddb4bda-5694-4152-8b05-00d17e85475e"
+        ## baseUrl = "https://hqlprswsas1.hq.un.fao.org:8181/sws",
+        ## token = ""
     )
 
     ## Source local scripts for this local test
@@ -89,11 +90,12 @@ if(as.character(estimateYear) %in% swsContext.datasets[[1]]@dimensions$timePoint
     preds[, geographicAreaM49 := fs2m49(geographicAreaFS)]
     preds[, measuredItemCPC := fcl2cpc(formatC(as.numeric(measuredItemFS),
                                                width = 4, format = "g", flag = "0"))]
-    preds[, measuredElement := measuredElementFS]
+    # preds[, measuredElement := measuredElementFS]
+    preds[, measuredElement := "5071"]
     preds = preds[, list(geographicAreaM49, measuredItemCPC, measuredElement,
                          timePointYears, Value)]
     preds[, flagObservationStatus := "I"]
     preds[, flagMethod := "e"]
     preds = preds[!is.na(Value), ]
-    SaveData(domain = "agriculture", dataset = "agriculture", data = preds)
+    saveStockData(data = preds)
 }

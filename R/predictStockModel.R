@@ -42,12 +42,21 @@ predictStockModel = function(model, newdata){
     ## 
     ## First, wrap rollsumr to avoid errors and return the same length
     rollsumr = function(x, k, ...){
+        # If stock change was missing, assume it was zero.
+        x[is.na(x)] = 0
         if(length(x) >= k){
             out = zoo::rollsumr(x, k, ...)
             out = c(rep(NA, k), out[-length(out)])
             return(out)
         } else {
-            return(rep(NA_real_, length(x)))
+            ## If length(x) < k, we can't do any computation.  However, we could
+            ## make an assumption that the missing stock changes are all zeros. 
+            ## This is a heroic assumption, but it allows us to impute for the
+            ## current year.
+            warning("HACK!  When historic stock changes are not available, ",
+                    "assume zeros.")
+            return(c(rep(NA_real_, length(x)-1),
+                     sum(x, na.rm = TRUE)))
         }
     }
     newdata[, cumulativeStock := rollsumr(scaledValue, k = model$cumulativeYears),
