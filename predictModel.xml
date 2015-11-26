@@ -10,6 +10,24 @@
 			<Mail>joshua.browning@fao.org</Mail>
 		</Author>
 	</Authors>
+	<Params>
+    <Param xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="Number">
+            <Code>startYear</Code>
+            <Label>First year</Label>
+            <Description>The start of the imputation period</Description>
+            <Compulsory>true</Compulsory>
+            <Min>2000</Min>
+            <Max>2050</Max>
+    </Param>
+    <Param xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="Number">
+            <Code>endYear</Code>
+            <Label>Last year</Label>
+            <Description>The end of the imputation period</Description>
+            <Compulsory>true</Compulsory>
+            <Min>2001</Min>
+            <Max>2050</Max>
+    </Param>
+	</Params>
 	<Datasets>
 		<MainDataset>
 			<Code>agriculture</Code>

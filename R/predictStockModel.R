@@ -9,13 +9,19 @@
 ##'   than constructing this directly, it is easier to just pass the result of a
 ##'   call to buildStockModel.
 ##' @param newdata A data.table containing the data which should be used for 
-##'   prediction.  If not provided, prediction is performed on the data used to
+##'   prediction.  If not provided, prediction is performed on the data used to 
 ##'   fit the model.
+##' @param estimateYear The year for which stock estimates should be generated. 
+##'   Must be a single value.
+##' @param warn Logical, defaults to FALSE.  The variability must be estimated 
+##'   on data prior to the estimateYear.  If data after estimateYear exists, an 
+##'   error is thrown by default or a warning generated (if TRUE) and data after
+##'   estimateYear is deleted.
 ##'   
 ##' @return A data.table object with the predictions.
-##' 
+##'   
 
-predictStockModel = function(model, newdata){
+predictStockModel = function(model, newdata, estimateYear, warn = FALSE){
     
     ## Input Checks
     stopifnot(is(model, "list"))
@@ -25,6 +31,17 @@ predictStockModel = function(model, newdata){
     stopifnot(model$yearColumn %in% colnames(newdata))
     stopifnot(model$valueColumn %in% colnames(newdata))
     stopifnot(model$groupingColumns %in% colnames(newdata))
+    stopifnot(length(estimateYear) == 1)
+    if(any(newdata$timePointYears > estimateYear)){
+        if(warn){
+            warning("newdata should not have observations occurring after ",
+                    "estimateYear!  Such observations have been deleted.")
+            newdata = newdata[timePointYears <= estimateYear, ]
+        } else {
+            stop("newdata should not have observations",
+                 " occurring after estimateYear!")
+        }
+    }
 
     ## Estimate variance within each group and scale the values
     newdata[, Variance := var(get(model$valueColumn), na.rm = TRUE),
@@ -68,5 +85,6 @@ predictStockModel = function(model, newdata){
     ## Scale up by the variance
     newdata[, expectedValue := expectedValue * sqrt(Variance)]
     newdata[, sdEstimate := sdEstimate * sqrt(Variance)]
+    newdata = newdata[timePointYears == estimateYear, ]
     return(newdata)
 }

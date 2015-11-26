@@ -58,9 +58,11 @@ saveStockData = function(data, verbose = FALSE, stockCode = "5071"){
     warning("HACK!  Sorting because of SaveData issue!")
     attr(data, "sorted") = NULL
     if(nrow(data) >= 1){ # If invalid dates/official data caused 0 rows, don't try to save.
-        faosws::SaveData(domain = "agriculture",
-                         dataset = "agriculture",
-                         data = data,
-                         normalized = TRUE)
+        return(faosws::SaveData(domain = "agriculture",
+                                dataset = "agriculture",
+                                data = data, normalized = TRUE))
+    } else {
+        return(list(inserted = 0, appended = 0, ignored = 0, discarded = 0,
+                    warnings = NULL))
     }
 }
