@@ -19,7 +19,9 @@
 ##'   estimateYear is deleted.
 ##'   
 ##' @return A data.table object with the predictions.
-##'   
+##' 
+##' @export
+##' 
 
 predictStockModel = function(model, newdata, estimateYear, warn = FALSE){
     
@@ -42,6 +44,14 @@ predictStockModel = function(model, newdata, estimateYear, warn = FALSE){
                  " occurring after estimateYear!")
         }
     }
+    
+    ## Ensure that we have records for all groups in the estimation year
+    toEstimate = unique(newdata[, model$groupingColumns, with = FALSE])
+    toEstimate[, c(model$yearColumn) := as.character(estimateYear)]
+    toEstimate[, measuredElement := "5071"]
+    newdata = merge(newdata, toEstimate, all = TRUE,
+                    by = c(model$groupingColumns, model$yearColumn,
+                           "measuredElement"))
 
     ## Estimate variance within each group and scale the values
     newdata[, Variance := var(get(model$valueColumn), na.rm = TRUE),
@@ -85,6 +95,6 @@ predictStockModel = function(model, newdata, estimateYear, warn = FALSE){
     ## Scale up by the variance
     newdata[, expectedValue := expectedValue * sqrt(Variance)]
     newdata[, sdEstimate := sdEstimate * sqrt(Variance)]
-    newdata = newdata[timePointYears == estimateYear, ]
+    newdata = newdata[get(model$yearColumn) == estimateYear, ]
     return(newdata)
 }
