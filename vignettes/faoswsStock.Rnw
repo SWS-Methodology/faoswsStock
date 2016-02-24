@@ -1,0 +1,204 @@
+\documentclass[nojss]{jss}
+\usepackage{url}
+\usepackage[sc]{mathpazo}
+\usepackage{geometry}
+\geometry{verbose,tmargin=2.5cm,bmargin=2.5cm,lmargin=2.5cm,rmargin=2.5cm}
+\setcounter{secnumdepth}{2}
+\setcounter{tocdepth}{2}
+\usepackage{breakurl}
+\usepackage{hyperref}
+\usepackage[ruled, vlined]{algorithm2e}
+\usepackage{mathtools}
+\usepackage{draftwatermark}
+\usepackage{float}
+\usepackage{placeins}
+\usepackage{mathrsfs}
+\usepackage{multirow}
+\usepackage{courier}
+%% \usepackage{mathbbm}
+\DeclareMathOperator{\sgn}{sgn}
+\DeclareMathOperator*{\argmax}{\arg\!\max}
+
+\title{\bf faoswsStock}
+
+\author{Josh M. Browning\\ Food and Agriculture
+    Organization \\ of the United Nations\\}
+
+\Plainauthor{Josh M. Browning}
+
+\Plaintitle{faoswsStock}
+
+\Shorttitle{faoswsStock}
+
+\Abstract{ 
+
+  This vignette provides a detailed description of the stock module, including both the methodology and the practical aspects of running the code.
+}
+
+\Keywords{Imputation, Linear Mixed Model, Agricultural Production, Ensemble Learning}
+
+\Address{
+  Joshua M. Browning\\
+  Economics and Social Statistics Division (ESS)\\
+  Economic and Social Development Department (ES)\\
+  Food and Agriculture Organization of the United Nations (FAO)\\
+  Viale delle Terme di Caracalla 00153 Rome, Italy\\
+  E-mail: \email{joshua.browning@fao.org}\\
+  URL: \url{https://github.com/SWS-Methodology/faoswsStock}
+}
+
+\begin{document}
+\SweaveOpts{concordance=TRUE}
+
+<<echo=FALSE>>=
+# Set up a database connection so we can pull the datasets
+library(faosws)
+library(faoswsStock)
+library(data.table)
+library(xtable)
+library(ggplot2)
+SetClientFiles("~/R certificate files/QA/")
+GetTestEnvironment(
+    baseUrl = "https://hqlqasws1.hq.un.fao.org:8181/sws",
+    token = "c585c410-fb9e-44ea-ba36-ef940d32185d"
+)
+# Pull data.  Other users may have different directories for the share drive on
+# the SWS:
+if(Sys.info()[7] == "josh")
+    R_SWS_SHARE_PATH = "/media/hqlprsws1_qa/"
+d = faoswsStock:::getStockData()
+@
+\newpage
+\section{Methodology}
+
+It has been emphasized that there is no alternative to systematic measurement. In particular, given the special importance of stocks for food security in general and for price stability in particular, there is no alternative to accurately measured stocks, at least in the long run. Several initiatives are under way to improve measured stock estimates, including under the Agricultural Market Information System (AMIS) and the Global Strategy to Improve Agricultural and Rural Statistics. Under the auspices of this strategy, the ten-year Agricultural and Rural Integrated Survey (AGRIS) programme has been developed, which not only lays the foundations for creating an efficient, overall agricultural statistical system, but also offers explicit options for estimating levels of stocks for different agricultural commodities. As AGRIS estimates can provide stocks in conjunction with several other variables of the FBS (production, feed, seed, etc.), it promises to provide particularly relevant estimates of stocks. Countries are therefore encouraged to make all efforts to measure stocks, at least of their most important food staples, either through a specialized survey or, preferably, as part of an integrated survey system such as AGRIS.
+
+The low level of measurement at the country level is directly reflected in the availability of stock data for FAO. The return rates for stock estimates are so low that these estimates are currently not included in any FAOSTAT domains. No separate domain brings such estimates into one place (e.g. analogous to production or trade), neither is there the systematic inclusion of stocks in any other data domain. The only domain where stocks appear is in the commodity balances, of which the FBS are a subset. However, commodity balances do not include levels of stocks, but only year-to-year changes in stocks. 
+
+As stocks, or at least stock changes, are an integral part of every supply-demand balance, estimates of stock changes have been included in the FBS system. In many instances, stock changes function as a balancing item.
+
+However, using stocks as a balancing item implies (as it does for any other element that is used as a balancing item) that all measurement errors are relegated to stocks (or the other element chosen as a balancing item). It also means that stock changes no longer only capture changes in stocks, but also function as a catch-all for all measurement errors, and would therefore better be referred to as stock changes and residual uses. This is an undesirable outcome for any element of the balance as it seriously diminishes the element's value as a statistical indicator; given the importance of stock for price volatility analysis, etc., it would be particularly serious. In addition, stock changes would "inherit" errors from previous years, resulting in steadily increasing distortions over time. 
+
+\subsection{Imputation/estimation}
+
+The need to move away from a residual approach poses the challenge of identifying an alternative method for generating an estimate, or rather an expected value and a distribution. If empirical stock estimates are available (e.g. the United States of America undertakes a biannual survey of its cereal stocks), they enter the balance as an observed value, ideally with a measured distribution. Clearly, this is the best solution and should be encouraged for as many countries and commodities as possible. 
+
+If no information about stock changes is available, a distribution needs to be assumed. However, even assuming a uniform distribution is problematic as it implies assuming that a stock change near the assumed minimum is just as likely as a stock change close to 0; however, a stock change just outside the boundaries has zero probability. Moreover, uniform distributions can be problematic at the balancing stage, as such distributions essentially become residuals. Thus, it is very important to construct some distribution for stocks, even if it is a very wide distribution to indicate that there is much variability in the estimate.
+
+The strategy here is to harness additional and readily available information inherent in stock holding practice and economics. Such information is available from, for example, knowledge about the costs of stock accumulation and reduction over time. This prior information can be harnessed to enable a move away from a uniform distribution in which every stock level has the same probability between a maximum (max) and a minimum (min), to an approach that makes some levels of stocks more likely than others, still within the maximum and minimum limits.
+
+Prior information about the economics and dynamics of storage can be used to derive both an expected value and a distribution:
+
+- Expected value: The expected value for the mean stock change should be zero in the long run; empirical information fully confirms this a priori expectation. The reasons for the long-run mean reversion to zero are obvious. Any long-run positive deviation from zero would amount to accumulation of stocks, which would rise the longer such positive shifts prevail and the higher the positive values are. Conversely, successive negative deviations would amount to a permanent drawdown of stocks, and thus be tantamount to an eventual stock-out, or imply unlikely (very costly) high initial levels of stocks. The reasons for a non-zero, short-term stock change lie in its ability to smooth fluctuations in consumption. The desire to keep consumption stable means that stocks function as a short-term buffer to smooth surpluses and deficits, i.e. demand for stocks is - at least at high levels of stocks - very price-elastic while consumption is not.
+
+<<fig = TRUE>>=
+ggplot(d, aes(x = Value)) + geom_bar() +
+    facet_wrap( ~ ItemName, scale = "free")
+@
+
+- Distribution: The above implies that positive and negative stock changes are likely to be symmetrically distributed around the zero mean. The analysis for United States wheat and maize suggests that the empirical distribution could be approximated by a normal distribution with a zero mean in which Shapiro-Wilk metrics are highly significant. This is already an improvement beyond assuming a uniform distribution for stock changes.  The following chunk of code examines the Shapiro-Wilk test for normality and finds p-values larger than 0.05 (in most cases), suggesting that we don't have significant evidence to reject the null hypothesis of a normal distribution.
+
+<<>>=
+options(scipen = 4)
+d[, shapiro.test(Value)$p.value, by = ItemName]
+@
+
+
+\subsection{Estimating stock changes in time t}
+
+The analysis presented so far suggests that stock changes are likely to be normally distributed around a zero mean. However, stock changes are unlikely to be independent over time: stock changes in previous years are likely to influence stock change in the current year. Thus, the stock change in the current year may not have an expected value of zero, but rather some amount that depends on previous stock changes. 
+
+Information can be harnessed to gauge both the likely direction and the likely amount of stock changes in time t. In fact, a positive stock change in t becomes increasingly likely the longer the preceding period of stock drawdowns and the higher the amounts of drawdowns - the larger the cumulative drawdown over time. If cereal stocks are drawn down for 15 years in a row, the likelihood of drawdowns in successive years becomes increasingly small.
+
+Conversely, if a country accumulates stocks for many years in a row, the cumulative amount of stocks would become so high that storage capacity dwindles, losses loom and the costs of holding stocks become prohibitively high. This means that the probability of a positive change in t increases the longer the history and larger the cumulative amounts of negative changes in the past, and vice versa. 
+
+Thus, there is need to construct a model for stock changes that is informed by knowledge of historical changes. One such model would be:
+
+$\Delta S_t = \beta \left(\sum_{i = 1}^k \Delta S_{t-i} \right) + \epsilon_i$
+
+In other words, it is assumed that the stock changes at time t depend on the sum of the previous k stock changes. An error term is added to indicate that the change in stock at time t is not exactly equal to this value; rather, the distribution of the stock change at time t is adjusted given the knowledge of previous stock changes, and still has variability. Alternatively, this could be expressed as:
+
+$\Delta S_t \sim N(\beta \left(\sum_{i = 1}^k \Delta S_{t-i} \right), \epsilon_i^2)$
+
+This provides a further improvement on the distribution of stock changes. A normal distribution can be assumed and the mean can be adjusted based on previous stock changes. This has the effect of reducing the spread of the distribution, as more is known about what the stock change at time t should be.
+
+Returning to United States cereal data enables examination of whether this hypothesis holds true. Below, we show the relationship between the sum of previous stock changes over 15 years and the current stock change (the code is taken from buildStockModel()).  It shows that there is a generally negative trend, thus validating the original hypothesis. The trends may not be extremely strong or significant, but they allow a distribution for the stock change to be inferred given previous cumulative changes. For example, if it is known that over the previous 15 years the net stock change for "Barley and products" was 2500, it can be expected that the next stock change should be normally distributed with a mean of -400 and a variability that allows values between -1200 and 400.
+
+<<fig = TRUE>>=
+k = 15
+d[, cumulativeStock :=
+      c(rep(NA, k), zoo::rollsumr(Value, k = k))[-(.N+1)],
+  by = c("ItemCode")]
+ggplot(d, aes(x = cumulativeStock, y = Value)) + geom_point() +
+    facet_wrap( ~ ItemName, scale = "free") +
+    geom_smooth(method = "lm", formula = y ~ x + 0)
+@
+
+\section{Implementation}
+
+This section describes each of the functions in the package, showing how to run them.  For more specifics, please see the R documentation on the github account.
+
+\subsection{getStockData}
+
+This function is used for retreiving the stock data on the SWS.  Currently, the data exists in a .csv file on the share drive, but should eventually be integrated into an adhoc table or into the agriculture production table.  However, the important thing is that only official data should be used in constructing the model.
+
+To obtain the stock data, simply run the getStockData function.
+
+<<>>=
+faoswsStock:::getStockData()
+@
+
+\subsection{buildStockModel}
+
+This function takes a dataset of historical, observed stock changes and estimates a simple, linear regression model using the cumulative previous drawdowns/inputs as the independent variable and the current drawdown/input as the dependent variable. Normality seemed like a reasonable assumption after some initial testing, and so we feel comfortable with a simple linear regression. Thus, the distribution of the stock change in a year t, given the previous cumulative drawdowns/inputs, will be normal with some mean and variance estimated from this model.
+
+<<fig=TRUE>>=
+d = faoswsStock:::getStockData()
+model = faoswsStock:::buildStockModel(data = d, plot = TRUE)
+is(model)
+is(model$model)
+@
+
+\subsection{chooseStockModel}
+
+The buildModel module creates a .RData object on the server every time it is run.  This function is useful for selecting the most recent model.  Note that the below code is specific to the user running it, and thus will need to be changed for a different user (either when building this vignette or running the function).
+
+<<>>=
+localDir = "/media/hqlprsws2_prod/browningj/stock/"
+list.files(localDir)
+faoswsStock:::chooseStockModel(list.files(localDir))
+@
+
+\subsection{predictStockModel}
+
+This function takes a fitted model (from buildStockModel) and fits it to a provided dataset. Essentially, this just requires calling predict.lm on the newdata, but the complicated bit is that the cumulative stock changes must also be computed for estimation. The passed dataset should be pulled from the agriculture production table on the new SWS, but the column names of the model object must be updated to reflect what the columns are in the new dataset.  Below is an example of the imputation of wheat in Afghanistan in 2012:
+
+<<>>=
+key = DatasetKey(domain = "agriculture", dataset = "aproduction",
+                 dimensions = list(
+                     Dimension(name = "geographicAreaM49", "4"),
+                     Dimension(name = "measuredElement", "5071"),
+                     Dimension(name = "measuredItemCPC", "0111"),
+                     Dimension(name = "timePointYears",
+                               as.character(1990:2011))))
+d = GetData(key)
+model$yearColumn = "timePointYears"
+model$groupingColumns = c("geographicAreaM49", "measuredItemCPC")
+faoswsStock:::predictStockModel(model, newdata = d, estimateYear = 2012)
+@
+
+\subsection{saveStockData}
+
+This function is essentially a SaveData call, but it does a few checks and "clean-ups" to the stock data to prepare it for saving.
+
+\subsection{R Modules on SWS}
+
+\subsubsection{buildModel}
+
+This module constructs the stock module and saves the result as a .RData object on the SWS server.  It makes no changes to the database or even a user's session, but it is important in order to run the next module (the imputation).
+
+\subsubsection{predictModel}
+
+This module takes the user's session and a model object (i.e. .RData file on the server) to generate estimates for the change in stock in the next year.  The chooseStockModel function is used to pick the model object that this module should use.  The current logic is to use the most recent "frozen" object, which should be a file named like "stockModel2016.02.24.10.53.25\_frozen.RData".  If no such frozen file exists, the most recent "non-frozen" object is used.  The buildModel module automatically creates these .RData objects, but manual intervention must be taken to freeze a model, if desired.
+
+\end{document}
