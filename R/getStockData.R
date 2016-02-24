@@ -5,6 +5,8 @@
 ##' 
 ##' @return The data, stored in a data.table format.
 ##' 
+##' @import data.table faosws
+##' 
 
 getStockData = function(){
     ## Check if on server or not:

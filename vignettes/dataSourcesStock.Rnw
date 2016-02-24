@@ -1,3 +1,4 @@
+%\VignetteIndexEntry{dataSourcesStock}
 \documentclass[nojss]{jss}
 \usepackage{url}
 \usepackage[sc]{mathpazo}
@@ -49,7 +50,6 @@
 
 
 \begin{document}
-\SweaveOpts{concordance=TRUE}
 
 <<echo=FALSE>>=
 # Set up a database connection so we can pull the datasets

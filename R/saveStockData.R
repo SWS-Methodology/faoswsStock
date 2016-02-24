@@ -1,13 +1,17 @@
 ##' Save Stock Data
 ##' 
-##' This function is essentially a SaveData call, but it does a few checks and
+##' This function is essentially a SaveData call, but it does a few checks and 
 ##' "clean-ups" to the stock data to prepare it for saving.
 ##' 
-##' @param data The data.table containing the stock data, as would be passed to SaveData.
-##' 
-##' @return No R objects are returned, as this functions purpose is solely to
-##' write to the database.
-##' 
+##' @param data The data.table containing the stock data, as would be passed to
+##'   SaveData.
+##' @param verbose Logical.  Should messages be printed updating the user on
+##'   what is happening?
+##' @param stockCode The element code for the stock commodity.
+##'   
+##' @return No R objects are returned, as this functions purpose is solely to 
+##'   write to the database.
+##'   
 ##' @export
 ##' 
 

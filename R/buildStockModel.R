@@ -44,7 +44,11 @@
 ##'   \item groupingColumns The passed groupingColumns.
 ##'   
 ##'   \item cumulativeYears The passed cumulativeYears. }
-##'   
+##' 
+##' @export
+##' 
+##' @import ggplot2
+##' 
 
 buildStockModel = function(data, yearColumn = "Year",
                            valueColumn = "Value",

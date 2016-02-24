@@ -12,7 +12,7 @@
 	</Authors>
 	<Datasets>
 		<MainDataset>
-			<Code>agriculture</Code>
+			<Code>aproduction</Code>
 			<SelectableDimensions>
 				<SelectableDimension compulsory="true">geographicAreaM49</SelectableDimension>
 				<SelectableDimension compulsory="true">measuredItemCPC</SelectableDimension>
