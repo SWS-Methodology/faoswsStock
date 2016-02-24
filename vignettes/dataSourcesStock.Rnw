@@ -74,61 +74,33 @@ Description of how each module works:
 \subsection{Examples of tables}
 
 \begin{itemize}
-    \item item\_type\_yield\_elements (`adhoc' table):
+    \item fcl\_2\_cpc (`adhoc' table):
 <<echo = FALSE, results=tex>>=
-d = ReadDatatable("item_type_yield_elements", limit = 4)
+d = ReadDatatable("fcl_2_cpc", limit = 4)
 print(xtable(d), include.rownames = FALSE)
 @
-    \item agriculture domain, aproduction dataset (time series table).  In this table, the countries specified by the user are ignored, as the module requires all countries to construct the model.  Additionally, only elements under the old 31/41/51 codes are used, and are always used, so the element codes provided in the session are also ignored.  However, the years and commodities selected by the user are respected.\\
+    \item fal\_2\_m49 (`adhoc' table):
 <<echo = FALSE, results=tex>>=
-d = data.table(geographicAreaM49 = 4, measuredElement = c(5312, 5510, 5421),
-               measuredItemCPC = "0111", timePointYears = 2011,
-               Value = c(2232000, 3388000, NA, 69219, NA, NA),
-               flagObservationStatus = c("", "", "M", "", "M", "M"),
-               flagMethod = c("-", "-", "u", "-", "u", "u"))
+d = ReadDatatable("fal_2_m49", limit = 4)
+print(xtable(d), include.rownames = FALSE)
+@
+    \item faostat\_one domain, FS1\_SUA dataset (time series table).
+<<echo = FALSE, results=tex>>=
+d = data.table(geographicAreaM49 = 4, measuredElement = 5071,
+               measuredItemCPC = "0111", timePointYears = 2008:2011,
+               Value = c(550, -1300, -200, 400)*1000,
+               flagObservationStatus = "E",
+               flagMethod = "f")
 print(xtable(d), include.rownames = FALSE)
 @
 Note that the flagMethod column is cut off in the above table, and that the last visible column name is flagObservationStatus.
-    \item List of yield elements (hardcoded list in R code):\\
-\texttt{allPrimaryCodes = c("01921.01", "02111", "02112", "02131", "02122", "02123",
-                 "02191", "02140", "02132", "02151", "02154", "02153", "02152",
-                 "01270", "01253.02", "0142", "01371", "01374", "01376",} $\cdots$
 \end{itemize}
 
 \subsection{Process}
 
 \begin{enumerate}
-    \item Finalize the production dataset.  This requires all the available questionaires to be imported, all data checked, all manual estimates to be finished, etc.  Once this has been completed, the dataset should be ``frozen'', i.e. no more manual updates or questionaire imports allowed until the process is completed.
-<<echo = FALSE, results = tex>>=
-print(xtable(d), include.rownames = FALSE)
-@
-    \item Animals slaughtered are imported into one field but the same number exists in many fields.  A module should run on the entire database to ensure consistency across these numbers.  The result from this module must be saved to the database.
-    \item The compute yield module must be run to ensure any missing area harvested/production/yield values are imputed when the other two are known.  This must also be saved to the database.
-<<echo = FALSE, results = tex>>=
-invisible({
-d[3, Value := 3388000/2232000]
-d[3, c("flagObservationStatus", "flagMethod") := list("I", "i")]
-})
-print(xtable(d), include.rownames = FALSE)
-@
-    \item The production imputation models can now be constructed, and they should be constructed for every available primary commodity as well as derived commodities which are disseminated.
-    \item The imputation models built in the previous step should be used to impute into the database.
-<<echo = FALSE, results = tex>>=
-invisible({
-d[6, Value := 4.230052]
-d[6, c("flagObservationStatus", "flagMethod") := list("I", "e")]
-})
-print(xtable(d), include.rownames = FALSE)
-@
-    \item The compute yield module should be run again to ensure all yields/productions/area harvesteds are computed.
-<<echo = FALSE, results = tex>>=
-invisible({
-d[5, Value := 4.230052*6.921900e4]
-d[5, c("flagObservationStatus", "flagMethod") := list("I", "i")]
-})
-print(xtable(d), include.rownames = FALSE)
-@
-    \item The imputations should be provided to the clerks for a manual check and validation, and then results can be saved to the database.
+    \item Run the Build Stock Imputation Module.  This will save a .RData object on the server.
+    \item Open a session for which stock data should be imputed, and run the Impute Stock Module.  This will generate estimates using the most recent stock model.  NOTE: If a previous model has been constructed and named with "frozen" then this model will be used instead of the most recent model.  Check the share drive to confirm which model you're using, or see the function faoswsStock:::chooseStockModel.
 \end{enumerate}
 
 \end{document}
