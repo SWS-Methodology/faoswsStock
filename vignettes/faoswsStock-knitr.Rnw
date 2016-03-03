@@ -52,21 +52,33 @@
 \begin{document}
 
 <<echo=FALSE>>=
+library(knitr)
+opts_chunk$set(concordance=TRUE)
+@
+
+
+<<echo=FALSE>>=
 # Set up a database connection so we can pull the datasets
 library(faosws)
 library(faoswsStock)
 library(data.table)
 library(xtable)
 library(ggplot2)
-SetClientFiles("~/R certificate files/QA/")
-GetTestEnvironment(
-    baseUrl = "https://hqlqasws1.hq.un.fao.org:8181/sws",
-    token = "c585c410-fb9e-44ea-ba36-ef940d32185d"
-)
 # Pull data.  Other users may have different directories for the share drive on
 # the SWS:
-if(Sys.info()[7] == "josh")
+if(Sys.info()[7] == "josh"){
     R_SWS_SHARE_PATH = "/media/hqlprsws1_qa/"
+    SetClientFiles("~/R certificate files/QA/")
+    token = "c585c410-fb9e-44ea-ba36-ef940d32185d"
+} else if(Sys.info()[7] == "caetano"){
+    R_SWS_SHARE_PATH = "//hqlprsws1.hq.un.fao.org/sws_r_share"
+    SetClientFiles(dir = "~/.R/QA/")
+    token = "66a36f31-1a29-4a49-8626-ae62117c251a"
+}
+GetTestEnvironment(
+    baseUrl = "https://hqlqasws1.hq.un.fao.org:8181/sws",
+    token = token
+)
 d = faoswsStock:::getStockData()
 @
 \newpage
@@ -92,7 +104,7 @@ Prior information about the economics and dynamics of storage can be used to der
 
 - Expected value: The expected value for the mean stock change should be zero in the long run; empirical information fully confirms this a priori expectation. The reasons for the long-run mean reversion to zero are obvious. Any long-run positive deviation from zero would amount to accumulation of stocks, which would rise the longer such positive shifts prevail and the higher the positive values are. Conversely, successive negative deviations would amount to a permanent drawdown of stocks, and thus be tantamount to an eventual stock-out, or imply unlikely (very costly) high initial levels of stocks. The reasons for a non-zero, short-term stock change lie in its ability to smooth fluctuations in consumption. The desire to keep consumption stable means that stocks function as a short-term buffer to smooth surpluses and deficits, i.e. demand for stocks is - at least at high levels of stocks - very price-elastic while consumption is not.
 
-<<fig = TRUE>>=
+<<>>=
 ggplot(d, aes(x = Value)) + geom_bar() +
     facet_wrap( ~ ItemName, scale = "free")
 @
@@ -125,7 +137,7 @@ This provides a further improvement on the distribution of stock changes. A norm
 
 Returning to United States cereal data enables examination of whether this hypothesis holds true. Below, we show the relationship between the sum of previous stock changes over 15 years and the current stock change (the code is taken from buildStockModel()).  It shows that there is a generally negative trend, thus validating the original hypothesis. The trends may not be extremely strong or significant, but they allow a distribution for the stock change to be inferred given previous cumulative changes. For example, if it is known that over the previous 15 years the net stock change for "Barley and products" was 2500, it can be expected that the next stock change should be normally distributed with a mean of -400 and a variability that allows values between -1200 and 400.
 
-<<fig = TRUE>>=
+<<>>=
 k = 15
 d[, cumulativeStock :=
       c(rep(NA, k), zoo::rollsumr(Value, k = k))[-(.N+1)],
@@ -153,7 +165,7 @@ faoswsStock:::getStockData()
 
 This function takes a dataset of historical, observed stock changes and estimates a simple, linear regression model using the cumulative previous drawdowns/inputs as the independent variable and the current drawdown/input as the dependent variable. Normality seemed like a reasonable assumption after some initial testing, and so we feel comfortable with a simple linear regression. Thus, the distribution of the stock change in a year t, given the previous cumulative drawdowns/inputs, will be normal with some mean and variance estimated from this model.
 
-<<fig=TRUE>>=
+<<>>=
 d = faoswsStock:::getStockData()
 model = faoswsStock:::buildStockModel(data = d, plot = TRUE)
 is(model)
