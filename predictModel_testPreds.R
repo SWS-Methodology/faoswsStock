@@ -14,7 +14,7 @@ library(faoswsUtil)
 R_SWS_SHARE_PATH = Sys.getenv("R_SWS_SHARE_PATH")
 R_SWS_SHARE_PATH = paste0(R_SWS_SHARE_PATH, "/browningj/stock/")
 DEBUG_MODE = Sys.getenv("R_DEBUG_MODE")
-initialYear = 1991 # Change documentation if this changes!
+initialYear = 1961 # Change documentation if this changes!
 
 if(!exists("DEBUG_MODE") || DEBUG_MODE == ""){
     cat("Not on server, so setting up environment...\n")
@@ -100,7 +100,8 @@ oldSuaData = oldSuaData[, list(Value = valAgg(Value),
                                "measuredItemFS", "timePointYears")]
 
 ## Load Stock Model
-availableModels = list.files(R_SWS_SHARE_PATH, full.names = TRUE)
+availableModels = list.files(paste0(R_SWS_SHARE_PATH, "browningj/stock"),
+                             full.names = TRUE)
 choosenModel = chooseStockModel(availableModels)
 ## This loads an object called "model"
 load(choosenModel)
@@ -112,24 +113,13 @@ model$yearColumn = "timePointYears"
 model$valueColumn = "Value"
 preds = lapply(years, function(year){
     predictStockModel(model, newdata = oldSuaData[timePointYears <= year, ],
-                      estimateYear = year)
+                      estimateYear = year, elementVar = "measuredElementFS")
 })
 preds = do.call("rbind", preds)
 
-## Reshape data to write back to SWS:
-preds[, Value := expectedValue]
-preds[, geographicAreaM49 := fs2m49(geographicAreaFS)]
-preds[, measuredItemCPC := fcl2cpc(formatC(as.numeric(measuredItemFS),
-                                           width = 4, format = "g", flag = "0"))]
-# preds[, measuredElement := measuredElementFS]
-preds[, measuredElement := "5071"]
-preds = preds[, list(geographicAreaM49, measuredItemCPC, measuredElement,
-                     timePointYears, Value)]
-preds[, flagObservationStatus := "I"]
-preds[, flagMethod := "e"]
-preds = preds[!is.na(Value), ]
-stats = saveStockData(data = preds)
-
-paste0(stats$inserted, " observations written, ",
-       stats$ignored, " weren't updated, ",
-       stats$discarded, " had problems.")
+## Add in cumulative stock changes
+openingStocks = oldSuaData[, list(Value = sum(Value),
+                                  firstYear = min(timePointYears),
+                                  count = .N),
+                           by = c(colnames(oldSuaData)[1:3])]
+openingStocks[count > 12, ]

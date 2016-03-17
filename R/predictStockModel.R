@@ -13,17 +13,20 @@
 ##'   fit the model.
 ##' @param estimateYear The year for which stock estimates should be generated. 
 ##'   Must be a single value.
+##' @param elementVar The column name of the variable containing the element. 
+##'   Defaults to "measuredElement".
 ##' @param warn Logical, defaults to FALSE.  The variability must be estimated 
 ##'   on data prior to the estimateYear.  If data after estimateYear exists, an 
 ##'   error is thrown by default or a warning generated (if TRUE) and data after
 ##'   estimateYear is deleted.
 ##'   
 ##' @return A data.table object with the predictions.
-##' 
+##'   
 ##' @export
 ##' 
 
-predictStockModel = function(model, newdata, estimateYear, warn = FALSE){
+predictStockModel = function(model, newdata, estimateYear,
+                             elementVar = "measuredElement", warn = FALSE){
     
     ## Input Checks
     stopifnot(is(model, "list"))
@@ -48,10 +51,10 @@ predictStockModel = function(model, newdata, estimateYear, warn = FALSE){
     ## Ensure that we have records for all groups in the estimation year
     toEstimate = unique(newdata[, model$groupingColumns, with = FALSE])
     toEstimate[, c(model$yearColumn) := as.character(estimateYear)]
-    toEstimate[, measuredElement := "5071"]
+    toEstimate[, c(elementVar) := "5071"]
     newdata = merge(newdata, toEstimate, all = TRUE,
                     by = c(model$groupingColumns, model$yearColumn,
-                           "measuredElement"))
+                           elementVar))
 
     ## Estimate variance within each group and scale the values
     newdata[, Variance := var(get(model$valueColumn), na.rm = TRUE),

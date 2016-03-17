@@ -83,17 +83,17 @@ Description of how each module works:
 
 \begin{itemize}
     \item fcl\_2\_cpc (`adhoc' table):
-<<echo = FALSE>>=
+<<echo=FALSE, results=tex>>=
 d = ReadDatatable("fcl_2_cpc", limit = 4)
 print(xtable(d), include.rownames = FALSE)
 @
     \item fal\_2\_m49 (`adhoc' table):
-<<echo = FALSE>>=
+<<echo=FALSE, results=tex>>=
 d = ReadDatatable("fal_2_m49", limit = 4)
 print(xtable(d), include.rownames = FALSE)
 @
     \item faostat\_one domain, FS1\_SUA dataset (time series table).
-<<echo = FALSE>>=
+<<echo=FALSE, results=tex>>=
 d = data.table(geographicAreaM49 = 4, measuredElement = 5071,
                measuredItemCPC = "0111", timePointYears = 2008:2011,
                Value = c(550, -1300, -200, 400)*1000,

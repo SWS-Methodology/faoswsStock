@@ -52,18 +52,18 @@
 \begin{document}
 
 <<echo=FALSE>>=
-library(knitr)
+library(knitr, warn.conflicts = FALSE, quietly=TRUE)
 opts_chunk$set(concordance=TRUE)
 @
 
 
-<<echo=FALSE>>=
+<<echo=FALSE, messages=FALSE, warnings=FALSE>>=
 # Set up a database connection so we can pull the datasets
-library(faosws)
-library(faoswsStock)
-library(data.table)
-library(xtable)
-library(ggplot2)
+library(faosws, warn.conflicts = FALSE, quietly=TRUE)
+library(faoswsStock, warn.conflicts = FALSE, quietly=TRUE)
+library(data.table, warn.conflicts = FALSE, quietly=TRUE)
+library(xtable, warn.conflicts = FALSE, quietly=TRUE)
+library(ggplot2, warn.conflicts = FALSE, quietly=TRUE)
 # Pull data.  Other users may have different directories for the share drive on
 # the SWS:
 if(Sys.info()[7] == "josh"){
@@ -104,7 +104,7 @@ Prior information about the economics and dynamics of storage can be used to der
 
 - Expected value: The expected value for the mean stock change should be zero in the long run; empirical information fully confirms this a priori expectation. The reasons for the long-run mean reversion to zero are obvious. Any long-run positive deviation from zero would amount to accumulation of stocks, which would rise the longer such positive shifts prevail and the higher the positive values are. Conversely, successive negative deviations would amount to a permanent drawdown of stocks, and thus be tantamount to an eventual stock-out, or imply unlikely (very costly) high initial levels of stocks. The reasons for a non-zero, short-term stock change lie in its ability to smooth fluctuations in consumption. The desire to keep consumption stable means that stocks function as a short-term buffer to smooth surpluses and deficits, i.e. demand for stocks is - at least at high levels of stocks - very price-elastic while consumption is not.
 
-<<>>=
+<<messages=FALSE, warnings=FALSE>>=
 ggplot(d, aes(x = Value)) + geom_bar() +
     facet_wrap( ~ ItemName, scale = "free")
 @
@@ -137,7 +137,7 @@ This provides a further improvement on the distribution of stock changes. A norm
 
 Returning to United States cereal data enables examination of whether this hypothesis holds true. Below, we show the relationship between the sum of previous stock changes over 15 years and the current stock change (the code is taken from buildStockModel()).  It shows that there is a generally negative trend, thus validating the original hypothesis. The trends may not be extremely strong or significant, but they allow a distribution for the stock change to be inferred given previous cumulative changes. For example, if it is known that over the previous 15 years the net stock change for "Barley and products" was 2500, it can be expected that the next stock change should be normally distributed with a mean of -400 and a variability that allows values between -1200 and 400.
 
-<<>>=
+<<messages=FALSE, warnings=FALSE>>=
 k = 15
 d[, cumulativeStock :=
       c(rep(NA, k), zoo::rollsumr(Value, k = k))[-(.N+1)],

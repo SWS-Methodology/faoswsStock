@@ -5,7 +5,6 @@ library(ggplot2)
 
 ## set up for the test environment and parameters
 R_SWS_SHARE_PATH = Sys.getenv("R_SWS_SHARE_PATH")
-R_SWS_SHARE_PATH = paste0(R_SWS_SHARE_PATH, "/browningj/stock/")
 DEBUG_MODE = Sys.getenv("R_DEBUG_MODE")
 
 if(!exists("DEBUG_MODE") || DEBUG_MODE == ""){
@@ -14,11 +13,9 @@ if(!exists("DEBUG_MODE") || DEBUG_MODE == ""){
     ## Define directories
     if(Sys.info()[7] == "josh"){
         apiDirectory = "~/Documents/Github/faoswsStock/R/"
-        R_SWS_SHARE_PATH = "~/Documents/Github/faoswsStock/savedModels/"
-    }
-    if(Sys.info()[7] == "rockc_000"){ #Josh's laptop
-        apiDirectory = "~/Github/faoswsStock/R/"
-        R_SWS_SHARE_PATH = "~/Github/faoswsStock/savedModels/"
+        R_SWS_SHARE_PATH = "/media/hqlprsws2_prod/"
+        SetClientFiles("~/R certificate files/Production/")
+        # SetClientFiles("~/R certificate files/QA/")
     }
 
     ## Get SWS Parameters
