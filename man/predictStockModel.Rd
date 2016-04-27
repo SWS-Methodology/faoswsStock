@@ -4,7 +4,8 @@
 \alias{predictStockModel}
 \title{Predict Stock Model}
 \usage{
-predictStockModel(model, newdata, estimateYear, warn = FALSE)
+predictStockModel(model, newdata, estimateYear,
+  elementVar = "measuredElement", warn = FALSE)
 }
 \arguments{
 \item{model}{A list object containing the relevant model information. Rather
@@ -17,6 +18,9 @@ fit the model.}
 
 \item{estimateYear}{The year for which stock estimates should be generated. 
 Must be a single value.}
+
+\item{elementVar}{The column name of the variable containing the element. 
+Defaults to "measuredElement".}
 
 \item{warn}{Logical, defaults to FALSE.  The variability must be estimated 
 on data prior to the estimateYear.  If data after estimateYear exists, an 
