@@ -41,7 +41,7 @@ saveStockData = function(data, verbose = FALSE, stockCode = "5071"){
                   list(0, "M", "n"))]
 
     ## Remove official data
-    key = DatasetKey(domain = "agriculture", dataset = "agriculture", dimensions = list(
+    key = DatasetKey(domain = "agriculture", dataset = "aproduction", dimensions = list(
         geographicAreaM49 = Dimension(name = "geographicAreaM49",
                                       keys = unique(data$geographicAreaM49)),
         measuredItemCPC = Dimension(name = "measuredItemCPC",
@@ -63,7 +63,7 @@ saveStockData = function(data, verbose = FALSE, stockCode = "5071"){
     attr(data, "sorted") = NULL
     if(nrow(data) >= 1){ # If invalid dates/official data caused 0 rows, don't try to save.
         return(faosws::SaveData(domain = "agriculture",
-                                dataset = "agriculture",
+                                dataset = "aproduction",
                                 data = data, normalized = TRUE))
     } else {
         return(list(inserted = 0, appended = 0, ignored = 0, discarded = 0,
