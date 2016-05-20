@@ -6,8 +6,8 @@
 	<Category>Imputation</Category>
 	<Authors>
 		<Author>
-			<Name>Josh Browning</Name>
-			<Mail>joshua.browning@fao.org</Mail>
+			<Name>Bruno Vidigal</Name>
+			<Mail>bruno.caetanovidigal@fao.org</Mail>
 		</Author>
 	</Authors>
 	<Params>
@@ -16,16 +16,16 @@
             <Label>First year</Label>
             <Description>The start of the imputation period</Description>
             <Compulsory>true</Compulsory>
-            <Min>2000</Min>
-            <Max>2050</Max>
+            <Min>1999</Min>
+            <Max>2014</Max>
     </Param>
     <Param xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="Number">
             <Code>endYear</Code>
             <Label>Last year</Label>
             <Description>The end of the imputation period</Description>
             <Compulsory>true</Compulsory>
-            <Min>2001</Min>
-            <Max>2050</Max>
+            <Min>1999</Min>
+            <Max>2014</Max>
     </Param>
 	</Params>
 	<Datasets>
