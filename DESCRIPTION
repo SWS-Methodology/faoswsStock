@@ -2,23 +2,22 @@ Package: faoswsStock
 Type: Package
 Title: Package to perform the imputation of stock changes for the FAO food
     balance sheets
-Version: 0.0.2
-Date: 2016-02-24
-Authors@R: c(person("Joshua M.", "Browning", role = c("aut", "cre"), email = "joshua.browning@fao.org"))
-Author: Joshua M. Browning <joshua.browning@fao.org>
-Maintainer: Joshua M. Browning <joshua.browning@fao.org>
+Version: 0.1.0
+Date: 2016-05-20
+Authors@R: c(person("Joshua M.", "Browning", role = c("aut"), email = "joshua.browning@fao.org"),
+             person("Bruno Caetano", "Vidigal", role = "cre", email = "bruno.caetanovidigal@fao.org"))
 Description: This package provides all the functions to perform imputation of
     stock changes for the FAO food balance sheets.
 URL: https://github.com/SWS-Methodology/faoswsStock
-License: GPL (>= 3)
+License: FAO
 Depends:
     faosws,
     data.table (>= 1.9.2),
     ggplot2
 Imports:
     zoo
-swsDatasetDepends: sws_share/browningj/stock/usaStockVariabilityFAOSTAT.csv
-swsModuleDepends: 
+swsDatasetDepends: agriculture:aproduction
+swsModuleDepends: faoswsProduction 
 LazyData: yes
 ZipData: no
 VignetteBuilder: knitr

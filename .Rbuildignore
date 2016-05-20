@@ -1,5 +1,6 @@
 sandbox
 buildModel.R
 savedModels
+^.*\.zip$
 ^.*\.Rproj$
 ^\.Rproj\.user$
