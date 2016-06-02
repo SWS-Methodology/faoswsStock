@@ -32,6 +32,7 @@ if(CheckDebug()){
     #files = dir("~/Github/faoswsFood/R", full.names = TRUE)
     #token = "66a36f31-1a29-4a49-8626-ae62117c251a"
   }
+  SetClientFiles("~/certificates/qa")
   ## Get SWS Parameters
   GetTestEnvironment(
     baseUrl = "https://hqlqasws1.hq.un.fao.org:8181/sws",
@@ -40,12 +41,6 @@ if(CheckDebug()){
     ## token = "90c00557-e740-46f4-8cd7-6c90e6d96124"
   )
   
-  ## Source local scripts for this local test
-  for(file in dir(apiDirectory, full.names = T))
-    source(file)
-  if(length(dir(apiDirectory, full.names = T)) == 0)
-    stop("No files in apiDirectory.  Are you sure it's the right one?")
-
 }
 
 ## Using the new data on SWS instead of oldSuaData
