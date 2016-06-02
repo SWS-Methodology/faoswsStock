@@ -35,7 +35,8 @@ if(CheckDebug()){
   ## Get SWS Parameters
   GetTestEnvironment(
     baseUrl = "https://hqlqasws1.hq.un.fao.org:8181/sws",
-    token = "b4995d52-cc4c-4e21-a6d8-de90b1f42e63"
+    token = "1e9d1161-9d0a-4151-8dc1-e33a95ef81f2"
+    #token = "b4995d52-cc4c-4e21-a6d8-de90b1f42e63"
     ## baseUrl = "https://hqlprswsas1.hq.un.fao.org:8181/sws",
     ## token = "90c00557-e740-46f4-8cd7-6c90e6d96124"
   )
@@ -52,8 +53,10 @@ if(CheckDebug()){
 stockCode <- "5071"
 prodCode <- "5510"
 codes <- c(stockCode, prodCode) 
-item <- c("0111", "0112", "0114", "0115",
-          "0116", "0117")
+# item <- c("0111", "0112", "0114", "0115",
+#           "0116", "0117")
+item <- ReadDatatable("fbs_stocks_comm_codes")[fbs_key == "measuredItemCPC", 
+                                               fbs_code]
 key = DatasetKey(
   domain = "agriculture",
   dataset = "aproduction",
