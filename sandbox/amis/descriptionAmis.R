@@ -1,16 +1,4 @@
----
-title: "**Stock Module**"
-
-author: |
-  | **Bruno Caetano Vidigal**
-  | Food and Agriculture Organization of the United Nations
-output: pdf_document
----
----
-
-```{r include=FALSE, cache=FALSE}
-## create R program in working directory
-## knitr::purl('sandbox/amis/descriptionAmis.Rmd')
+## ----include=FALSE, cache=FALSE------------------------------------------
 ## Load required functions
 library(data.table)
 library(ggplot2)
@@ -20,32 +8,17 @@ library(devtools)
 #install_github("ndphillips/yarrr")
 library("yarrr")
 library(RColorBrewer)
-```
 
-```{r setup, include=FALSE}
+## ----setup, include=FALSE------------------------------------------------
 knitr::opts_chunk$set(echo = TRUE)
-```
 
-```{r include=FALSE, cache=FALSE}
+## ----include=FALSE, cache=FALSE------------------------------------------
 data4Items = fread("C:\\Users\\caetano\\Desktop\\stocksModule\\amis\\riceWheatSoybeansMaizeStocks.csv")
-```
 
-
-## Abstract
-
-This vignette provides a detailed analysis of the AMIS data for the stock module.
-
-
-# 1. AMIS Data
-
-The data below was pulled from the AMIS website by the link **http://statistics.amis-outlook.org**. 
-The variables studied are: **Closing Stocks**, **Opening Stocks** and **Total Supply** for all **`r length(unique(data4Items$countryRegionName)) - 2`** countries present in **AMIS** database.
-```{r, echo=FALSE}
+## ---- echo=FALSE---------------------------------------------------------
 head(data4Items, 4)
-```
 
-# 2. Data Manipulation
-```{r include=FALSE, cache=FALSE}
+## ----include=FALSE, cache=FALSE------------------------------------------
 data4Items <- dcast.data.table(data4Items, 
                              countryRegionName + productName + units + year ~ elementName,
                              value.var = "value")
@@ -66,16 +39,11 @@ data4Items[!(countryRegionName %in% c("European Union", "United States of Americ
 
 data4Items[productName == "Soybeans", type := "pulses"]
 data4Items[productName != "Soybeans", type := "cereals"]
-```
 
-We computed the **Delta Total Supply**, **Delta Stocks** and the **% of Stocks**
-```{r, echo=FALSE}
+## ---- echo=FALSE---------------------------------------------------------
 head(data4Items, 4)
-```
 
-# 3. Data Visualization
-
-```{r, echo=FALSE, fig.height=8}
+## ---- echo=FALSE, fig.height=8-------------------------------------------
 options(warn=-1)
 data4Items[, yearNumeric := as.numeric(substr(year, 1, 4))]
 
@@ -103,9 +71,8 @@ ggplot(data=data4Items[countryRegionName %in% c("World", "European Union", "Unit
     legend.position = "top"
   )
   
-```
 
-```{r, echo=FALSE, fig.height=4}
+## ---- echo=FALSE, fig.height=4-------------------------------------------
 options(warn=-1)
 ggplot(data = data4Items[countryRegionName %in% c("World", "European Union", "United States of America") & productName == "TOTAL CEREALS"],
        aes(x=deltaTotalSupply, y=deltaStocks, group=1)) +
@@ -116,43 +83,25 @@ ggplot(data = data4Items[countryRegionName %in% c("World", "European Union", "Un
   ggtitle("Total Cereals \n Delta Total Supply vs. Delta Stocks") +
   ylab('Delta Stocks (Million tonnes)') + xlab('Delta Total Supply (Million tonnes)') +
   geom_smooth(method=lm)
-```
 
-# 4. Correlation
-
-```{r include=FALSE, cache=FALSE}
+## ----include=FALSE, cache=FALSE------------------------------------------
 tabCor = data4Items[, list(
   corDeltaStocksDeltaTotalSupply = 100 * round(cor(deltaStocks, deltaTotalSupply,
                                        use = "pairwise.complete.obs"), 3)),
                                        by = list(countryRegionName, productName)]
-```
 
-```{r, echo=FALSE}
+## ---- echo=FALSE---------------------------------------------------------
 
 kable(dcast.data.table(tabCor[countryRegionName %in% c("World", "European Union", "United States of America")],
 countryRegionName ~ productName, value.var = "corDeltaStocksDeltaTotalSupply"), format = "markdown", padding = 0,
       col.names=c("Region", "Maize", "Rice (milled)", "Soybeans", "Cereals", "Wheat"))
-```
 
-# 5. Model
-
-```{r, echo=FALSE}
+## ---- echo=FALSE---------------------------------------------------------
 fit <- lm(deltaStocks ~ deltaTotalSupply + region + type, 
           data = data4Items[productName %in% c("TOTAL CEREALS", "Soybeans") & 
                               !countryRegionName %in% c("World", "China", "China Mainland")])
-```
 
-
-A simple linear regression was fitted excluding the regions **World** and **China** and **China** **Mainland**. The region was divided in: USA, EU and others countries. The items fitted were **Total** **Cereals** and **Soybeans**.
-
-* Dependent variable: stocks variation
-* Independent variable: total supply variation
-
-The **R Square** is **`r paste0(100*round(summary(fit)$r.squared, 3), "%")`** 
-The coefficients are:
-
-```{r, echo=FALSE}
+## ---- echo=FALSE---------------------------------------------------------
  
 kable(data.frame(fit$coefficients), format = "markdown", padding = 0)
-```
 
