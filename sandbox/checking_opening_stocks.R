@@ -1,9 +1,13 @@
-
 ## load the library
-library(faosws)
-library(data.table)
-library(ggplot2)
-library(faoswsUtil)
+suppressMessages({
+  library(faosws)
+  library(data.table)
+  library(ggplot2)
+  library(faoswsUtil)
+  library(faoswsFlag)
+  library(countrycode)
+})
+
 
 ## set up for the test environment and parameters
 ## R_SWS_SHARE_PATH = Sys.getenv("R_SWS_SHARE_PATH")
@@ -11,36 +15,28 @@ library(faoswsUtil)
 ## DEBUG_MODE = Sys.getenv("R_DEBUG_MODE")
 initialYear = 1961 # Change documentation if this changes!
 
+R_SWS_SHARE_PATH <- Sys.getenv("R_SWS_SHARE_PATH")
+
+# This return FALSE if on the Statistical Working System
 if(CheckDebug()){
-  cat("Not on server, so setting up environment...\n")
   
-  ## Define directories
-  if(Sys.info()[7] == "josh"){
-    apiDirectory = "~/Documents/Github/faoswsStock/R/"
-    R_SWS_SHARE_PATH = "/media/hqlprsws1_qa/"
-    SetClientFiles("~/R certificate files/Production/")
-    # SetClientFiles("~/R certificate files/QA/")
-  } else if(Sys.info()[7] == "caetano"){ # bruno's work computer
-    apiDirectory = "~/Github/faoswsStock/R"
-    R_SWS_SHARE_PATH = "//hqlprsws1.hq.un.fao.org/sws_r_share"
-    SetClientFiles(dir = "~/.R/QA/")
-    #files = dir("~/Github/faoswsFood/R", full.names = TRUE)
-    #token = "66a36f31-1a29-4a49-8626-ae62117c251a"
-  }
-  ## Get SWS Parameters
-  GetTestEnvironment(
-    baseUrl = "https://hqlqasws1.hq.un.fao.org:8181/sws",
-    token = "1e9d1161-9d0a-4151-8dc1-e33a95ef81f2"
-    #token = "b4995d52-cc4c-4e21-a6d8-de90b1f42e63"
-    ## baseUrl = "https://hqlprswsas1.hq.un.fao.org:8181/sws",
-    ## token = "90c00557-e740-46f4-8cd7-6c90e6d96124"
-  )
+  message("Not on server, so setting up environment...")
   
-  ## Source local scripts for this local test
-  for(file in dir(apiDirectory, full.names = T))
-    source(file)
-  if(length(dir(apiDirectory, full.names = T)) == 0)
-    stop("No files in apiDirectory.  Are you sure it's the right one?")
+  library(faoswsModules)
+  SETTINGS <- ReadSettings("modules/impute_stocks/sws.yml")
+  
+  # If you're not on the system, your settings will overwrite any others
+  R_SWS_SHARE_PATH <- SETTINGS[["share"]]
+  
+  # Define where your certificates are stored
+  SetClientFiles(SETTINGS[["certdir"]])
+  
+  # Get session information from SWS. Token must be obtained from web interface
+  GetTestEnvironment(baseUrl = SETTINGS[["server"]],
+                     token = SETTINGS[["token"]])
+  
+  files = dir("~/Github/faoswsStock/R", full.names = TRUE)
+  sapply(files, source)
   
 }
 
@@ -49,47 +45,96 @@ if(CheckDebug()){
 ## Using the new data on SWS instead of oldSuaData
 stockCode <- "5071"
 openingStock <- "5113"
-prodCode <- "5510"
-codes <- c(stockCode, openingStock, prodCode) 
-# item <- c("0111", "0112", "0114", "0115",
-#           "0116", "0117")
-item <- ReadDatatable("fbs_stocks_comm_codes")[fbs_key == "measuredItemCPC", 
-                                               fbs_code]
-key = DatasetKey(
-  domain = "agriculture",
-  dataset = "aproduction",
-  dimensions = list(
-    Dimension(
-      name = "geographicAreaM49",
-      keys = GetCodeList("agriculture", "aproduction", "geographicAreaM49")[, code]
-    ),
-    Dimension(name = "measuredElement", keys = codes),
-    Dimension(name = "timePointYears", keys = as.character(1961:1999)),
-    Dimension(
-      name = "measuredItemCPC",
-      keys = GetCodeList("agriculture", "aproduction", "measuredItemCPC")[code %in% item, code]
-    )
-  )
-)
+# # prodCode <- "5510"
+# codes <- c(stockCode, openingStock) 
+# # item <- c("0111", "0112", "0114", "0115",
+# #           "0116", "0117")
+# item <- ReadDatatable("fbs_stocks_comm_codes")[fbs_key == "measuredItemCPC", 
+#                                                fbs_code]
+# key = DatasetKey(
+#   domain = "agriculture",
+#   dataset = "aproduction",
+#   dimensions = list(
+#     Dimension(
+#       name = "geographicAreaM49",
+#       keys = GetCodeList("agriculture", "aproduction", "geographicAreaM49")[, code]
+#     ),
+#     Dimension(name = "measuredElement", keys = codes),
+#     Dimension(name = "timePointYears", keys = as.character(1961:1999)),
+#     Dimension(
+#       name = "measuredItemCPC",
+#       keys = GetCodeList("agriculture", "aproduction", "measuredItemCPC")[code %in% item, code]
+#     )
+#   )
+# )
+# 
+# newSuaData <- GetData(key)
 
-newSuaData <- GetData(key)
 
-newSuaData[geographicAreaM49 == 100 & timePointYears %in% c("1993", "1994", "1995") &
-             measuredItemCPC == "0111" & measuredElement %in% c("5071", "5113")]
+openingStockData <- getStockData(measuredElement = c(openingStock), 
+                          yearRange = as.character(1961:2014))
 
-newSuaData <- dcast.data.table(
-  newSuaData, geographicAreaM49 + measuredItemCPC + timePointYears ~ measuredElement,
+# stockData[, list(length(unique(measuredElement))), by=list(timePointYears, 
+# geographicAreaM49, measuredItemCPC)][order(-V1)]
+
+## Merge stockData with the flagValidTable
+# keys = c("flagObservationStatus", "flagMethod")
+# stockData <- merge(
+#   stockData, flagValidTable, by = keys, all.x = T
+# )
+
+# stockData[, combineValueFlag
+#           := paste0("(", flagObservationStatus, ", ", flagMethod, ")")]
+
+
+head(flagValidTable)
+
+keys = c("flagObservationStatus", "flagMethod")
+
+openingStockData <- merge(openingStockData, flagValidTable, 
+      by = keys, all.x = T)
+
+setkey(openingStockData, geographicAreaM49, measuredItemCPC, timePointYears)
+
+openingStockData <- nameData("agriculture", "aproduction", openingStockData)
+
+## Create a .csv file
+# opening_stocks_country_item <- openingStockData[Protected == TRUE, .N, c("geographicAreaM49_description", "measuredItemCPC_description")]
+# setkey(opening_stocks_country_item, geographicAreaM49_description, measuredItemCPC_description)
+# 
+# getwd()
+# 
+# write.csv(opening_stocks_country_item, 
+#             file = "sandbox/opening_stocks/opening_stocks_country_item.csv", row.names = F)
+
+openingStockData[geographicAreaM49 == 100 & measuredItemCPC == "0111" & 
+                   timePointYears %in% as.character(1999:2003)]
+
+openingStockData[Protected == TRUE]
+
+
+
+stockData[, openingStocks := cumsum(Value),
+           by=list(geographicAreaM49, measuredItemCPC)]
+
+
+stockData[timePointYears == 1998]
+
+#############################################
+
+stockData <- dcast.data.table(
+  stockData, geographicAreaM49 + measuredItemCPC + timePointYears + combineValueFlag ~ measuredElement,
   value.var = "Value")
 
-setnames(newSuaData, 
-         old = c("5071", "5113", "5510"), 
-         new = c("deltaStocks", "openingStocks", "production"))
+setnames(stockData, 
+         old = c("5071", "5113"), 
+         new = c("deltaStocks", "openingStocks"))
 
-for(cname in c("deltaStocks", "openingStocks", "production")){
-  newSuaData[is.na(get(cname)), c(cname) := 0]
+for(cname in c("deltaStocks", "openingStocks")){
+  stockData[is.na(get(cname)), c(cname) := 0]
 }
 
-setkey(newSuaData, geographicAreaM49, measuredItemCPC, timePointYears)
+setkey(stockData, geographicAreaM49, measuredItemCPC, timePointYears)
 
 
 newSuaData[, absStocks := cumsum(deltaStocks),
