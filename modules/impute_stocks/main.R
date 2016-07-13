@@ -37,8 +37,17 @@ if(CheckDebug()){
 }
 
 ## Stocks
-stockData <- getStockData(as.character(1999:2014))
+stockCode <- "5071"
+openingStockCode <- "5113"
+stockData <- getStockData(measuredElement = c(stockCode), 
+                          as.character(1999:2014))
 setnames(stockData, "Value", "deltaStocks")
+
+## Opening stocks data
+# openingStockData <- getStockData(measuredElement = c(openingStockCode), 
+#                           as.character(1961:2014))
+# setnames(openingStockData, "Value", "openingStocks")
+
 
 ## Merge stockData with the flagValidTable
 keys = c("flagObservationStatus", "flagMethod")
@@ -46,9 +55,14 @@ stockData <- merge(
   stockData, flagValidTable, by = keys, all.x = T
 )
 
-# stockData[is.na(flagMethod)]
-# stockData[is.na(flagObservationStatus)]
-# stockData[is.na(Valid)]
+## Merge openingStocksData with the flagValidTable
+# keys = c("flagObservationStatus", "flagMethod")
+# openingStockData <- merge(
+#   openingStockData, flagValidTable, by = keys, all.x = T
+# )
+
+## Filtering just Protected figures
+# openingStockData <- openingStockData[Protected == TRUE]
 
 ## Production
 productionData <- getProductionData(as.character(1998:2014))
@@ -112,42 +126,27 @@ data[, deltaTotalSupply := c(0, diff(totalSupply)),
 # Let's apply the coefficients fitted by AMIS data for cereals and pulses.
 # For refined_sugar we will use coefficients fitted from the F.O Lichts data.
 
-# coefficients for USA and cereals
-# amis coefficients
-################################################################################
-# str(fit[["coefficients"]])
-# coef <- fit[["coefficients"]]
-# out.df <- data.frame(names(coef), coef)
-# rownames(out.df) <- NULL
-# #dir.create("data-raw")
-# write.csv(out.df, file = "data-raw/coefficients_cereals_pulses.csv", row.names = FALSE)
-# devtools::document()
-# devtools::install()
+
+# Amis coefficients
 coefficients_cereals_pulses <- fread(system.file("extdata/coefficients_cereals_pulses.csv", package = "faoswsStock"))
 
-# fo_licht coefficients
-# str(sugarModel[["coefficients"]])
-# coefSugar <- sugarModel[["coefficients"]]
-# outSugar <- data.frame(names(coefSugar), coefSugar)
-# rownames(outSugar) <- NULL
-# #dir.create("data-raw")
-# write.csv(outSugar, file = "data-raw/coefficients_sugar.csv", row.names = FALSE)
+# Fo_Licht coefficients
 coefficients_sugar <- fread(system.file("extdata/coefficients_sugar.csv", package = "faoswsStock"))
 
-# coefficients for USA and CEREALS
+# Coefficients for USA and cereals
 data[itemGroup == "cereals" & geographicAreaM49 == 840, 
      deltaStocksEstimated :=  coefficients_cereals_pulses[names.coef. == "(Intercept)", coef] +
        coefficients_cereals_pulses[names.coef. == "deltaTotalSupply", coef] * deltaTotalSupply + 
        coefficients_cereals_pulses[names.coef. == "regionUnited States of America", coef]]
 
-# coefficients for USA and PULSES
+# coefficients for USA and pulses
 data[itemGroup == "pulses" & geographicAreaM49 == 840, 
      deltaStocksEstimated :=  coefficients_cereals_pulses[names.coef. == "(Intercept)", coef] +
        coefficients_cereals_pulses[names.coef. == "deltaTotalSupply", coef] * deltaTotalSupply + 
        coefficients_cereals_pulses[names.coef. == "regionUnited States of America", coef] +
        coefficients_cereals_pulses[names.coef. == "typepulses", coef]]
 
-# coefficients for USA and Refined_sugar
+# coefficients for USA and refined_sugar
 data[itemGroup == "refined_sugar" & geographicAreaM49 == 840, 
      deltaStocksEstimated :=  coefficients_sugar[names.coefSugar. == "(Intercept)", coefSugar] +
        coefficients_sugar[names.coefSugar. == "delta_total_supply", coefSugar] * deltaTotalSupply]
@@ -191,14 +190,19 @@ data[itemGroup == "cereals" & !(geographicAreaM49 %in% c(840, 40, 56, 100, 196,
                                                          428, 440, 442, 470, 528,
                                                          616, 620, 642, 703, 705,
                                                          724, 752, 826)), 
-     deltaStocksEstimated := -1.32490 + 0.28250 * deltaTotalSupply + 1.00563]
+     deltaStocksEstimated := coefficients_cereals_pulses[names.coef. == "(Intercept)", coef] + 
+       coefficients_cereals_pulses[names.coef. == "deltaTotalSupply", coef] * deltaTotalSupply + 
+       coefficients_cereals_pulses[names.coef. == "regionOthers countries", coef]]
 
 data[itemGroup == "pulses" & !(geographicAreaM49 %in% c(840, 40, 56, 100, 196, 203,
                                                         208, 233, 246, 250, 276, 300,
                                                         348, 372, 380, 428, 440, 442,
                                                         470, 528, 616, 620, 642, 703,
                                                         705, 724, 752, 826)), 
-     deltaStocksEstimated := -1.32490 + 0.28250 * deltaTotalSupply + 1.00563 + 0.32012]
+     deltaStocksEstimated := coefficients_cereals_pulses[names.coef. == "(Intercept)", coef] + 
+       coefficients_cereals_pulses[names.coef. == "deltaTotalSupply", coef] * deltaTotalSupply + 
+       coefficients_cereals_pulses[names.coef. == "regionOthers countries", coef] + 
+       coefficients_cereals_pulses[names.coef. == "typepulses", coef]]
 
 data[itemGroup == "refined_sugar" & geographicAreaM49 %in% !(geographicAreaM49 %in% 
                                                                c(840, 40, 56, 100,
@@ -209,7 +213,9 @@ data[itemGroup == "refined_sugar" & geographicAreaM49 %in% !(geographicAreaM49 %
                                                                  616, 620, 642, 703,
                                                                  705, 724, 752, 826)) &
        incomeGroup %in% c("Lower middle income", "Low income"), 
-     deltaStocksEstimated := -2321.6041785 + 0.8164414 * deltaTotalSupply + 2167.8907130]
+     deltaStocksEstimated := coefficients_sugar[names.coefSugar. == "(Intercept)", coefSugar] + 
+       coefficients_sugar[names.coefSugar. == "delta_total_supply", coefSugar] * deltaTotalSupply + 
+       coefficients_sugar[names.coefSugar. == "country_groupindustrialised", coefSugar]]
 
 
 data[itemGroup == "refined_sugar" & geographicAreaM49 %in% !(geographicAreaM49 %in% 
@@ -221,23 +227,65 @@ data[itemGroup == "refined_sugar" & geographicAreaM49 %in% !(geographicAreaM49 %
                                                                  616, 620, 642, 703,
                                                                  705, 724, 752, 826)) &
        incomeGroup %in% c("Upper middle income", "High income"), 
-     deltaStocksEstimated := -2321.6041785 + 0.8164414 * deltaTotalSupply]
+     deltaStocksEstimated := coefficients_sugar[names.coefSugar. == "(Intercept)", coefSugar] + 
+       coefficients_sugar[names.coefSugar. == "delta_total_supply", coefSugar] * deltaTotalSupply]
 
+## Merge stocks Data with Opening Stocks
+
+# data <- merge(data, openingStockData[, c("geographicAreaM49", "measuredItemCPC",
+#                                          "timePointYears", "openingStocks"), with = F],
+#               all.x = T)
+
+
+setkey(data, geographicAreaM49, measuredItemCPC, timePointYears)
+data[Protected == FALSE | is.na(Protected), deltaStocks := deltaStocksEstimated]
+data[Protected == TRUE, deltaStocks := deltaStocks]
+
+data[is.na(deltaStocks), deltaStocks := 0]
+
+## Calculating opening stocks
+data[, openingStocksCalculated := cumsum(deltaStocks),
+     by = list(geographicAreaM49, measuredItemCPC)]
+
+## Get rid of some of the columns that we don't need anymore:
+data[, c("deltaStocksEstimated", "production", "netTrade",
+               "incomeGroup", "itemGroup", "totalSupply", "deltaTotalSupply") := NULL]
+
+
+data <- data[timePointYears != 1998]
+setkey(data, geographicAreaM49, measuredItemCPC, timePointYears)
+
+dataDF <- data.frame(data)
+
+for(i in seq_len(nrow(dataDF))){
+  if(dataDF[i, "openingStocksCalculated"] < 0){
+    dataDF[i, "deltaStocks"] <- dataDF[i, "deltaStocks"] - dataDF[i, "openingStocksCalculated"]
+  }
+}
+dataDF$openingStocksCalculated <- cumsum(dataDF$deltaStocks)
+# summary(dataDF$openingStocksCalculated)
+# summary(dataDF$deltaStocks)
 
 ## Save data
 
 ## We have to make a filter using just Protected != TRUE
+dataToSave <- data.table(dataDF)
+dataToSave <- dataToSave[Protected == FALSE | is.na(Protected)]
 
-dataToSave <- data[Protected == FALSE | is.na(Protected) & timePointYears >= 1999]
-
-## Get rid of some of the columns that we don't need anymore:
-dataToSave[, c("deltaStocks", "Valid", "Protected", "production", "netTrade",
-               "incomeGroup", "itemGroup", "totalSupply", "deltaTotalSupply") := NULL]
-
-setnames(dataToSave, "deltaStocksEstimated", "Value")
+dataToSave[, c("Valid", "Protected") := NULL]
 dataToSave[, measuredElement := "5071"]
 dataToSave[, flagObservationStatus := "I"]
 dataToSave[, flagMethod := "e"]
+
+dataToSave <- melt.data.table(dataToSave, id.vars = c("geographicAreaM49", "measuredItemCPC", 
+                                        "timePointYears", "flagObservationStatus",
+                                        "flagMethod", "measuredElement"), 
+                measure.vars = c("deltaStocks", "openingStocksCalculated"))
+dataToSave[variable == "deltaStocks", measuredElement := "5071"]
+dataToSave[variable == "openingStocksCalculated", measuredElement := "5113"]
+
+setnames(dataToSave, "value", "Value")
+dataToSave[, c("variable") := NULL]
 
 setcolorder(dataToSave,
             c("timePointYears", "geographicAreaM49", "measuredItemCPC",
