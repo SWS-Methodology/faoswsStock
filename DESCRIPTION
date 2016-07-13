@@ -2,8 +2,8 @@ Package: faoswsStock
 Type: Package
 Title: Package to perform the imputation of stock changes for the FAO food
     balance sheets
-Version: 0.1.0
-Date: 2016-05-20
+Version: 0.2.0
+Date: 2016-07-13
 Authors@R: c(person("Joshua M.", "Browning", role = c("aut"), email = "joshua.browning@fao.org"),
              person("Bruno Caetano", "Vidigal", role = "cre", email = "bruno.caetanovidigal@fao.org"))
 Description: This package provides all the functions to perform imputation of
