@@ -17,7 +17,9 @@ Depends:
 Imports:
     zoo
 swsDatasetDepends: agriculture:aproduction
-swsModuleDepends: faoswsProduction 
+swsModuleDepends: 
+    faoswsProduction,
+    faoswsTrade
 LazyData: yes
 ZipData: no
 VignetteBuilder: knitr
