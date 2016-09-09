@@ -16,8 +16,8 @@ Depends:
     ggplot2
 Imports:
     zoo
-swsDatasetDepends: agriculture:aproduction
-swsModuleDepends: faoswsProduction 
+swsDatasetDepends: agriculture:aproduction, trade:total_trade_cpc_m49
+swsModuleDepends: faoswsProduction, faoswsTrade
 LazyData: yes
 ZipData: no
 VignetteBuilder: knitr
