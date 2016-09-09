@@ -136,17 +136,37 @@ countryRegionName ~ productName, value.var = "corDeltaStocksDeltaTotalSupply"), 
 
 # 5. Model
 
+
+
 ```{r, echo=FALSE}
-fit <- lm(deltaStocks ~ deltaTotalSupply + region + type, 
-          data = data4Items[productName %in% c("TOTAL CEREALS", "Soybeans") & 
-                              !countryRegionName %in% c("World", "China", "China Mainland")])
+
+fit <- lm(formula = closingStocks ~ totalSupply +
+             region * totalSupply +
+             type * totalSupply - region - type,
+           data = data4Items[productName %in% c("TOTAL CEREALS", "Soybeans") &
+                               !countryRegionName %in% c("World", "China", "China Mainland") &
+                               closingStocks > 0 & totalSupply > 0])
+
+# summary(fit)
+# 
+# windows()
+# plot(fitted(fit),residuals(fit),xlab="Fitted Values",ylab="Residuals")
+# abline(h=0)
+
+
+# fit <- lm(deltaStocks ~ deltaTotalSupply + region + type, 
+#           data = data4Items[productName %in% c("TOTAL CEREALS", "Soybeans") & 
+#                               !countryRegionName %in% c("World", "China", "China Mainland")])
 ```
 
 
-A simple linear regression was fitted excluding the regions **World** and **China** and **China** **Mainland**. The region was divided in: USA, EU and others countries. The items fitted were **Total** **Cereals** and **Soybeans**.
+# A simple linear regression was fitted excluding the regions **World** and **China** and **China** **Mainland**. The region was divided in: USA, EU and others countries. The items fitted were **Total** **Cereals** and **Soybeans**.
 
-* Dependent variable: stocks variation
-* Independent variable: total supply variation
+A linear regression was fitted excluding the regions **World** and **China** and **China** **Mainland**. The region was divided in: USA, EU and others countries. The items fitted were **Total** **Cereals** and **Soybeans**.
+
+
+* Dependent variable: closing stocks 
+* Independent variable: total supply, region and the type of commodity.
 
 The **R Square** is **`r paste0(100*round(summary(fit)$r.squared, 3), "%")`** 
 The coefficients are:

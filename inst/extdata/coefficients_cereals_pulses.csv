@@ -1,6 +1,6 @@
 "names.coef.","coef"
-"(Intercept)",-1.32490283208218
-"deltaTotalSupply",0.282501378550066
-"regionOthers countries",1.00563240038011
-"regionUnited States of America",0.410811500551199
-"typepulses",0.320122882137128
+"(Intercept)",-0.423402363738798
+"totalSupply",0.109562344572935
+"totalSupply:regionOthers countries",0.0449290665765003
+"totalSupply:regionUnited States of America",0.0303605827745102
+"totalSupply:typepulses",-0.0699751305779011

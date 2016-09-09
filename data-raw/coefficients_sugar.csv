@@ -1,4 +1,4 @@
-"names.coefSugar.","coefSugar"
-"(Intercept)",-2321.60417845417
-"delta_total_supply",0.816441425305868
-"country_groupindustrialised",2167.89071296479
+"names.coef.","coef"
+"supply",0.270236381689613
+"supply:country_groupdeveloping",0.0265826435286282
+"supply:country_groupindustrialised",NA

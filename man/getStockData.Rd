@@ -4,7 +4,7 @@
 \alias{getStockData}
 \title{Get Stocks Data}
 \usage{
-getStockData(yearRange)
+getStockData(measuredElement, yearRange)
 }
 \arguments{
 \item{yearRange}{Character vector with the range of the years.}

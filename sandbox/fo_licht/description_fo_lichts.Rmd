@@ -150,20 +150,33 @@ kable(tabCor, format = "markdown", padding = 0)
 # 5. Model
 
 ```{r, echo=FALSE}
-sugarModel <- lm(delta_stocks ~ delta_total_supply + country_group, data = sugarData)
+
+sugarData[, country_group := as.factor(country_group)]
+
+sugarModel <- lm(formula = ending_stocks ~ -1 + supply + country_group * supply - country_group,
+           data = sugarData)
+
+# summary(sugarModel)
+
+# 
+# windows()
+# plot(fitted(sugarModel),residuals(sugarModel),xlab="Fitted Values",ylab="Residuals")
+# abline(h=0)
+
+# sugarModel <- lm(delta_stocks ~ delta_total_supply + country_group, data = sugarData)
 ```
 
 A linear regression was fitted:
 
-* Dependent variable: delta stocks 
-* Independent variable: delta supply and country_group
+* Dependent variable: ending stocks 
+* Independent variable: supply and country_group
 
 
 The coefficients are:
 
 ```{r, echo=FALSE}
  
-kable(data.frame(sugarModel$coefficients), format = "markdown", padding = 0)
+kable(data.frame(sugarModel$coefficients[1:2]), format = "markdown", padding = 0)
 ```
 
 The **R Square** is **`r paste0(100*round(summary(sugarModel)$r.squared, 3), "%")`** 
