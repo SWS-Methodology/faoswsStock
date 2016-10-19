@@ -16,8 +16,8 @@
             <Label>First year</Label>
             <Description>The start of the imputation period</Description>
             <Compulsory>true</Compulsory>
-            <Min>1999</Min>
-            <Max>2014</Max>
+            <Min>1991</Min>
+            <Max>2013</Max>
     </Param>
     <Param xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="Number">
             <Code>endYear</Code>
