@@ -27,6 +27,6 @@ getProductionData <- function(yearRange) {
   
   productionData = GetData(
     productionKey,
-    flags = FALSE)
+    flags = TRUE)
   return(productionData)
 }
