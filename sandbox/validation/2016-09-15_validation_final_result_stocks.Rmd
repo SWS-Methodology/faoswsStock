@@ -1,0 +1,432 @@
+---
+title: "**Stock Module**"
+
+author: |
+  | **Bruno Caetano Vidigal**
+  | Food and Agriculture Organization of the United Nations
+output: pdf_document
+---
+---
+
+```{r include=FALSE, cache=FALSE}
+## create R program in working directory
+## knitr::purl('sandbox/amis/descriptionAmis.Rmd')
+## Load required functions
+library(data.table)
+library(ggplot2)
+library(scales)
+library(knitr)
+library(devtools)
+library("yarrr")
+library(RColorBrewer)
+library(faoswsUtil)
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE, cache=FALSE}
+dlpath <- file.path("C:", "Users", "caetano", "Documents", "Github", "faoswsStock",
+                    "sandbox", "validation", "2016_09_15_final_result_stocks.csv")
+dataValidation <- fread(dlpath)
+```
+
+
+## Abstract
+
+This vignette provides a detailed analysis of the stock module. In addition to analysing the delta stocks, this document has analysis
+about the **opening** **stocks** and **%** **of** **stocks** available.  
+The group of commodities studied are **cereals**, **pulses** and **refined** **sugar**. 
+
+# 1. Descriptive Statistics
+
+The methodology used to imputate the delta stock data was based on previous analyses done with **AMIS** **Data** and **F**.**O** **Lichts** **Data**. 
+Find below the basic description of the data.
+
+```{r, echo=FALSE}
+basic_info <- dataValidation[, list(countries = length(unique(geographicAreaM49)),
+commodities = length(unique(measuredItemCPC)),
+min_year = min(timePointYears),
+max_year = max(timePointYears))]
+
+kable(basic_info, format = "markdown", padding = 0, 
+col.names=c("Country", "Commodity", "Min Year", "Max Year"))
+```
+
+# 2. Data Visualization
+
+There is no production for **refined** **sugar** in **2014**.
+
+## 2.1 World
+
+
+```{r, echo=FALSE, fig.height=6}
+options(warn=-1)
+
+dataValidation[, timePointYears := as.numeric(timePointYears)]
+
+tabPercent <- dataValidation[, list(
+          percent = sum(openingStocks, na.rm=T)/sum(totalSupply, na.rm = T)
+), by = list(timePointYears, itemGroup)
+]
+
+plotcolors <- colorRampPalette(c("black", "blue", "green"))
+
+ggplot(data=tabPercent,
+      aes(x=timePointYears, y=percent, colour=itemGroup)) +
+ geom_line(aes(), stat = "identity", position=position_dodge(), size=1) + 
+scale_y_continuous(labels = scales::percent) +
+  scale_color_manual( values = plotcolors(length(unique(tabPercent$itemGroup))) ) +
+  theme(legend.title=element_blank(), strip.text = element_text(size=7)) +
+  ylab('% Opening Stocks') + xlab('') +
+  ggtitle("World: % Opening Stocks by Year") +
+  scale_x_continuous(lim=c(1999, 2014), breaks=seq(1999, 2014, 3)) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(size = 8, face = "bold", angle = 45, vjust = .5),
+    legend.position = "top",
+    legend.title=element_blank()
+)
+  
+```
+
+```{r, echo=FALSE, fig.height=6}
+options(warn=-1)
+
+tabSupply <- dataValidation[, list(
+totalSupply = sum(totalSupply, na.rm = T)
+), by = list(timePointYears, itemGroup)
+]
+
+plotcolors <- colorRampPalette(c("black", "blue", "green"))
+
+ggplot(data=tabSupply,
+      aes(x=timePointYears, y=totalSupply, colour=itemGroup)) +
+ geom_line(aes(), stat = "identity", position=position_dodge(), size=1) + 
+ facet_grid(
+    itemGroup ~ .
+      , scales = "free"
+    ) +
+# scale_y_continuous(labels = scales::percent) +
+  scale_color_manual( values = plotcolors(length(unique(tabSupply$itemGroup))) ) +
+  theme(legend.title=element_blank(), strip.text = element_text(size=7)) +
+  ylab('Total Supply (tonnes)') + xlab('') +
+  ggtitle("World: Total Supply by Year") +
+  scale_x_continuous(lim=c(1999, 2014), breaks=seq(1999, 2014, 3)) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(size = 8, face = "bold", angle = 45, vjust = .5),
+    legend.position = "top",
+    legend.title=element_blank()
+)
+  
+```
+
+```{r, echo=FALSE, fig.height=6}
+options(warn=-1)
+
+tabDelta <- dataValidation[, list(
+totalDeltaStocks = sum(deltaStocks, na.rm = T),
+totalSupply = sum(totalSupply, na.rm = T)
+), by = list(timePointYears, itemGroup)
+]
+
+setkey(tabDelta, itemGroup, timePointYears)
+tabDelta[, deltaTotalSupply := c(0, diff(totalSupply)),
+         by = list(itemGroup)]
+
+
+ggplot(data = tabDelta[timePointYears > 1999 & timePointYears < 2014],
+       aes(x=deltaTotalSupply, y=totalDeltaStocks, group=1)) +
+  geom_point(aes(), stat = "identity", position=position_dodge(), size=1.5) +
+  facet_wrap(~ itemGroup, scales = "free") +
+  theme_bw() +
+  theme(legend.title=element_blank(), strip.text = element_text(size=7)) +
+  ggtitle("World \n Delta Total Supply vs. Delta Stocks") +
+  ylab('Delta Stocks (Million tonnes)') + xlab('Delta Total Supply (Million tonnes)') +
+  geom_smooth(method=lm)
+
+```
+
+## 2.2 Income Group
+
+```{r, echo=FALSE, fig.height=6}
+options(warn=-1)
+
+tabPercent <- dataValidation[, list(
+          percent = sum(openingStocks, na.rm=T)/sum(totalSupply, na.rm = T)
+# ,
+# totalSupply = sum(totalSupply, na.rm = T)
+), by = list(timePointYears, itemGroup, incomeGroup)
+]
+
+tabPercent$incomeGroup <- factor(tabPercent$incomeGroup, 
+levels = c("High income", "Upper middle income", "Lower middle income", "Low income"))
+
+plotcolors <- colorRampPalette(c("gray70", "blue", "green", "black"))
+tabPercent <- tabPercent[!is.na(incomeGroup)]
+
+ggplot(data=tabPercent,
+      aes(x=timePointYears, y=percent, group=incomeGroup, colour = incomeGroup)) +
+ geom_line(aes(), stat = "identity", position=position_dodge(), size=1) + 
+ facet_grid(
+    itemGroup ~ .
+      , scales = "free"
+    ) +
+scale_y_continuous(labels = scales::percent) +
+   scale_color_manual( values = plotcolors(length(unique(tabPercent$incomeGroup)))) +
+   theme(legend.title=element_blank(), strip.text = element_text(size=5)) +
+  ylab('% Opening Stocks') + xlab('') +
+  ggtitle("Income Group: % Opening Stocks by Year") +
+  scale_x_continuous(lim=c(1999, 2014), breaks=seq(1999, 2014, 3)) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(size = 8, face = "bold", angle = 45, vjust = .5),
+    legend.position = "top",
+    legend.title=element_blank()
+)
+
+````
+
+```{r, echo=FALSE, fig.height=6}
+options(warn=-1)
+
+tabSupplyIncome <- dataValidation[, list(
+totalSupply = sum(totalSupply, na.rm = T)
+), by = list(timePointYears, itemGroup, incomeGroup)
+]
+
+tabSupplyIncome$incomeGroup <- factor(tabSupplyIncome$incomeGroup, 
+levels = c("High income", "Upper middle income", "Lower middle income", "Low income"))
+
+plotcolors <- colorRampPalette(c("gray70", "blue", "green", "black"))
+tabSupplyIncome <- tabSupplyIncome[!is.na(incomeGroup)]
+
+ggplot(data=tabSupplyIncome,
+      aes(x=timePointYears, y=totalSupply, group=incomeGroup, colour = incomeGroup)) +
+ geom_line(aes(), stat = "identity", position=position_dodge(), size=1) + 
+ facet_grid(
+    itemGroup ~ .
+      , scales = "free"
+    ) +
+# scale_y_continuous(labels = scales::percent) +
+   scale_color_manual( values = plotcolors(length(unique(tabSupplyIncome$incomeGroup)))) +
+   theme(legend.title=element_blank(), strip.text = element_text(size=5)) +
+  ylab('Total Supply (tonnes)') + xlab('') +
+  ggtitle("Income Group: Total Supply by Year") +
+  scale_x_continuous(lim=c(1999, 2014), breaks=seq(1999, 2014, 3)) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(size = 8, face = "bold", angle = 45, vjust = .5),
+    legend.position = "top",
+    legend.title=element_blank()
+)
+
+````
+
+```{r, echo=FALSE, fig.height=8, fig_width = 4}
+options(warn=-1)
+
+tabDeltaIncome <- dataValidation[, list(
+totalDeltaStocks = sum(deltaStocks, na.rm = T),
+totalSupply = sum(totalSupply, na.rm = T)
+), by = list(timePointYears, itemGroup, incomeGroup)
+]
+
+
+tabDeltaIncome$incomeGroup <- factor(tabDeltaIncome$incomeGroup, 
+levels = c("High income", "Upper middle income", "Lower middle income", "Low income"))
+
+plotcolors <- colorRampPalette(c("gray70", "blue", "green", "black"))
+tabDeltaIncome <- tabDeltaIncome[!is.na(incomeGroup)]
+
+setkey(tabDeltaIncome, itemGroup, incomeGroup, timePointYears)
+tabDeltaIncome[, deltaTotalSupply := c(0, diff(totalSupply)),
+         by = list(itemGroup, incomeGroup)]
+
+
+ggplot(data = tabDeltaIncome[timePointYears > 1999 & timePointYears < 2014 & itemGroup == "cereals"],
+       aes(x=deltaTotalSupply, y=totalDeltaStocks, group=incomeGroup, colour=incomeGroup)) +
+  geom_point(aes(), stat = "identity", position=position_dodge(), size=1.5) +
+  facet_grid(itemGroup ~ incomeGroup, scales="free_y") +
+  # facet_grid(incomeGroup ~ type, scales="free_y") +
+  scale_color_manual( values = plotcolors(length(unique(tabDeltaIncome$incomeGroup)))) +
+  theme_bw() +
+  theme(legend.title=element_blank(), strip.text = element_text(size=7)) +
+  ggtitle("Income Group & Cereals \n Delta Total Supply vs. Delta Stocks") +
+  ylab('Delta Stocks (Million tonnes)') + xlab('Delta Total Supply (Million tonnes)') #+
+  #geom_smooth(method=lm)
+  
+```
+
+```{r, echo=FALSE, fig.height=6}
+options(warn=-1)
+
+ggplot(data = tabDeltaIncome[timePointYears > 1999 & timePointYears < 2014 & itemGroup == "pulses"],
+       aes(x=deltaTotalSupply, y=totalDeltaStocks, group=incomeGroup, colour=incomeGroup)) +
+  geom_point(aes(), stat = "identity", position=position_dodge(), size=1.5) +
+  facet_grid(itemGroup ~ incomeGroup, scales="free_y") +
+  scale_color_manual( values = plotcolors(length(unique(tabDeltaIncome$incomeGroup)))) +
+  theme_bw() +
+  theme(legend.title=element_blank(), strip.text = element_text(size=7)) +
+  ggtitle("Income Group & Pulses \n Delta Total Supply vs. Delta Stocks") +
+  ylab('Delta Stocks (Million tonnes)') + xlab('Delta Total Supply (Million tonnes)') #+
+  #geom_smooth(method=lm)
+
+````
+
+```{r, echo=FALSE, fig.height=6}
+options(warn=-1)
+
+ggplot(data = tabDeltaIncome[timePointYears > 1999 & timePointYears < 2014 & itemGroup == "refined_sugar"],
+       aes(x=deltaTotalSupply, y=totalDeltaStocks, group=incomeGroup, colour=incomeGroup)) +
+  geom_point(aes(), stat = "identity", position=position_dodge(), size=1.5) +
+  facet_grid(itemGroup ~ incomeGroup, scales="free_y") +
+  scale_color_manual( values = plotcolors(length(unique(tabDeltaIncome$incomeGroup)))) +
+  theme_bw() +
+  theme(legend.title=element_blank(), strip.text = element_text(size=7)) +
+  ggtitle("Income Group & Refined Sugar \n Delta Total Supply vs. Delta Stocks") +
+  ylab('Delta Stocks (Million tonnes)') + xlab('Delta Total Supply (Million tonnes)') #+
+  #geom_smooth(method=lm)
+
+````
+
+
+## 2.3 Country
+
+```{r, echo=FALSE, fig.height=6}
+options(warn=-1)
+
+tabPercentCountry <- dataValidation[, list(
+          percent = sum(openingStocks, na.rm=T)/sum(totalSupply, na.rm = T)
+# ,
+# totalSupply = sum(totalSupply, na.rm = T)
+), by = list(timePointYears, itemGroup, geographicAreaM49_description)
+]
+
+tabPercentCountry <- tabPercentCountry[!is.na(percent)]
+
+plotcolors <- colorRampPalette(c("gray70", "blue", "green", "black"))
+# plotcolors <- colorRampPalette(c("gray70", "blue", "black"))
+
+ggplot(data=tabPercentCountry[geographicAreaM49_description %in% c("Brazil", "India", "Germany", "United States of America")],
+      # aes(x=timePointYears, y=percent, colour=type)) +
+      aes(x=timePointYears, y=percent, group=geographicAreaM49_description, colour = geographicAreaM49_description)) +
+ geom_line(aes(), stat = "identity", position=position_dodge(), size=1) + 
+ facet_grid(
+    itemGroup ~ .
+      , scales = "free"
+    ) +
+scale_y_continuous(labels = scales::percent) +
+    scale_color_manual( values = plotcolors(length(unique(tabPercentCountry[geographicAreaM49_description %in% c("Brazil", "India", "Germany", "United States of America", "China")]$geographicAreaM49_description)))) +
+   theme(legend.title=element_blank(), strip.text = element_text(size=5)) +
+  ylab('% Opening Stocks') + xlab('') +
+  ggtitle("Country: % Opening Stocks by Year") +
+  scale_x_continuous(lim=c(1999, 2014), breaks=seq(1999, 2014, 3)) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(size = 8, face = "bold", angle = 45, vjust = .5),
+    legend.position = "top",
+    legend.title=element_blank()
+)
+````
+
+```{r, echo=FALSE, fig.height=6}
+options(warn=-1)
+
+tabSupplyCountry <- dataValidation[, list(
+totalSupply = sum(totalSupply, na.rm = T)
+), by = list(timePointYears, itemGroup, geographicAreaM49_description)
+]
+
+tabSupplyCountry <- tabSupplyCountry[!is.na(totalSupply)]
+
+plotcolors <- colorRampPalette(c("gray70", "blue", "green", "black"))
+# plotcolors <- colorRampPalette(c("gray70", "blue", "black"))
+
+ggplot(data=tabSupplyCountry[geographicAreaM49_description %in% c("Brazil", "India", "Germany", "United States of America")],
+      aes(x=timePointYears, y=totalSupply, group=geographicAreaM49_description, colour = geographicAreaM49_description)) +
+ geom_line(aes(), stat = "identity", position=position_dodge(), size=1) + 
+ facet_grid(
+    itemGroup ~ .
+      , scales = "free"
+    ) +
+# scale_y_continuous(labels = scales::percent) +
+    scale_color_manual( values = plotcolors(length(unique(tabSupplyCountry[geographicAreaM49_description %in% c("Brazil", "India", "Germany", "United States of America")]$geographicAreaM49_description)))) +
+   theme(legend.title=element_blank(), strip.text = element_text(size=5)) +
+  ylab('Total Supply (tonnes)') + xlab('') +
+  ggtitle("Country: Total Supply by Year") +
+  scale_x_continuous(lim=c(1999, 2014), breaks=seq(1999, 2014, 3)) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(size = 8, face = "bold", angle = 45, vjust = .5),
+    legend.position = "top",
+    legend.title=element_blank()
+)
+````
+
+```{r, echo=FALSE, fig.height=8, fig_width = 4}
+options(warn=-1)
+
+tabDeltaCountry <- dataValidation[, list(
+totalDeltaStocks = sum(deltaStocks, na.rm = T),
+totalSupply = sum(totalSupply, na.rm = T)
+), by = list(timePointYears, itemGroup, geographicAreaM49_description)
+]
+
+tabDeltaCountry <- tabDeltaCountry[!is.na(totalSupply)]
+
+plotcolors <- colorRampPalette(c("gray70", "blue", "green", "black"))
+
+setkey(tabDeltaCountry, itemGroup, geographicAreaM49_description, timePointYears)
+tabDeltaCountry[, deltaTotalSupply := c(0, diff(totalSupply)),
+         by = list(itemGroup, geographicAreaM49_description)]
+
+
+ggplot(data = tabDeltaCountry[timePointYears > 1999 & timePointYears < 2014 &
+geographicAreaM49_description %in% c("Brazil", "India", "Germany", "United States of America") & itemGroup == "cereals"],
+       aes(x=deltaTotalSupply, y=totalDeltaStocks, group=geographicAreaM49_description, colour=geographicAreaM49_description)) +
+  geom_point(aes(), stat = "identity", position=position_dodge(), size=1.5) +
+  facet_grid(itemGroup ~ geographicAreaM49_description, scales="free_y") +
+  scale_color_manual( values = plotcolors(length(unique(tabSupplyCountry[geographicAreaM49_description %in% c("Brazil", "India", "Germany", "United States of America")]$geographicAreaM49_description)))) +
+  theme_bw() +
+  theme(legend.title=element_blank(), strip.text = element_text(size=7)) +
+  ggtitle("Country & Cereals \n Delta Total Supply vs. Delta Stocks") +
+  ylab('Delta Stocks (Million tonnes)') + xlab('Delta Total Supply (Million tonnes)') #+
+  #geom_smooth(method=lm)
+  
+```
+
+```{r, echo=FALSE, fig.height=8, fig_width = 4}
+options(warn=-1)
+
+ggplot(data = tabDeltaCountry[timePointYears > 1999 & timePointYears < 2014 &
+geographicAreaM49_description %in% c("Brazil", "India", "Germany", "United States of America") & itemGroup == "pulses"],
+       aes(x=deltaTotalSupply, y=totalDeltaStocks, group=geographicAreaM49_description, colour=geographicAreaM49_description)) +
+  geom_point(aes(), stat = "identity", position=position_dodge(), size=1.5) +
+  facet_grid(itemGroup ~ geographicAreaM49_description, scales="free_y") +
+  scale_color_manual( values = plotcolors(length(unique(tabSupplyCountry[geographicAreaM49_description %in% c("Brazil", "India", "Germany", "United States of America")]$geographicAreaM49_description)))) +
+  theme_bw() +
+  theme(legend.title=element_blank(), strip.text = element_text(size=7)) +
+  ggtitle("Country & Pulses \n Delta Total Supply vs. Delta Stocks") +
+  ylab('Delta Stocks (Million tonnes)') + xlab('Delta Total Supply (Million tonnes)') #+
+  #geom_smooth(method=lm)
+
+````
+
+```{r, echo=FALSE, fig.height=8, fig_width = 4}
+options(warn=-1)
+
+ggplot(data = tabDeltaCountry[timePointYears > 1999 & timePointYears < 2014 &
+geographicAreaM49_description %in% c("Brazil", "India", "Germany", "United States of America") & itemGroup == "refined_sugar"],
+       aes(x=deltaTotalSupply, y=totalDeltaStocks, group=geographicAreaM49_description, colour=geographicAreaM49_description)) +
+  geom_point(aes(), stat = "identity", position=position_dodge(), size=1.5) +
+  facet_grid(itemGroup ~ geographicAreaM49_description, scales="free_y") +
+  scale_color_manual( values = plotcolors(length(unique(tabSupplyCountry[geographicAreaM49_description %in% c("Brazil", "India", "Germany", "United States of America")]$geographicAreaM49_description)))) +
+  theme_bw() +
+  theme(legend.title=element_blank(), strip.text = element_text(size=7)) +
+  ggtitle("Country & Refined Sugar \n Delta Total Supply vs. Delta Stocks") +
+  ylab('Delta Stocks (Million tonnes)') + xlab('Delta Total Supply (Million tonnes)') #+
+  #geom_smooth(method=lm)
+````
