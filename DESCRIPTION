@@ -16,10 +16,8 @@ Depends:
     ggplot2
 Imports:
     zoo
-<<<<<<< HEAD
 swsDatasetDepends: agriculture:aproduction, trade:total_trade_cpc_m49
 swsModuleDepends: faoswsProduction, faoswsTrade
-=======
 swsDatasetDepends: agriculture:aproduction
 swsModuleDepends:
     faoswsProduction,
