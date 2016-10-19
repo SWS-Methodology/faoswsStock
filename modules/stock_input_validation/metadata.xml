@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RScript xmlns="http://www.fao.org/rScript" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.fao.org/rScript rScript.xsd ">
+	<Name> Food Input Validation </Name>
+	<Description>This module is designed to ensure the food data complies with the
+    standards, and fulfil the input requirement for performing imputation.</Description>
+	<Category>Validation</Category>
+	<Authors>
+		<Author>
+			<Name>Bruno Caetano Vidigal</Name>
+			<Mail>bruno.caetanovidigal@fao.org</Mail>
+		</Author>
+	</Authors>
+  <Params>
+		<Param xsi:type="List">
+	    <Code>validation_selection</Code>
+	    <Label>Perform validation on </Label>
+		  <Description>
+			  Please specify the selection to perform validation.
+		  </Description>
+		  <Compulsory>true</Compulsory>
+      <Options>
+				<Option>
+					<Label> Selected session </Label>
+					<Value>session</Value>
+				</Option>
+				<Option>
+					<Label> All Food Data (as specified by fbs_food_comm_codes) </Label>
+					<Value>all</Value>
+				</Option>
+			</Options>
+    </Param>
+  </Params>
+	<Datasets>
+		<MainDataset>
+			<Code>aproduction</Code>
+			<SelectableDimensions>
+				<SelectableDimension compulsory="true">geographicAreaM49</SelectableDimension>
+				<SelectableDimension compulsory="true">measuredItemCPC</SelectableDimension>
+				<SelectableDimension compulsory="true">measuredElement</SelectableDimension>
+				<SelectableDimension compulsory="true">timePointYears</SelectableDimension>
+			</SelectableDimensions>
+		</MainDataset>
+	</Datasets>
+	<InteractiveValidation>false</InteractiveValidation>
+	<Background>false</Background>
+</RScript>

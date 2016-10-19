@@ -1,0 +1,8 @@
+current: qa
+all:
+  share: //hqlprsws1.hq.un.fao.org/sws_r_share
+qa:
+  certdir: ~/.R/QA/
+  server: https://hqlqasws1.hq.un.fao.org:8181/sws
+  #token: 1e9d1161-9d0a-4151-8dc1-e33a95ef81f2
+  token: da8ef1bc-159c-4787-9661-93646495142b
