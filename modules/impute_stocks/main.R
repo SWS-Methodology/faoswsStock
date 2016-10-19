@@ -657,6 +657,8 @@ setcolorder(dataFinalToSave,
             c("timePointYears", "geographicAreaM49", "measuredItemCPC",
               "measuredElement", "Value", "flagObservationStatus", "flagMethod"))
 
+dataFinalToSave <- dataFinalToSave[!is.na(Value)]
+
 ###
 stats = SaveData(domain = "agriculture", dataset = "aproduction", data = dataFinalToSave)
 
