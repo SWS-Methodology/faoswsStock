@@ -1,6 +1,8 @@
 sandbox
 buildModel.R
 savedModels
+modules
+data-raw
 ^.*\.zip$
 ^.*\.Rproj$
 ^\.Rproj\.user$
