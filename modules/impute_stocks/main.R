@@ -250,6 +250,17 @@ data[, "openingStocks" := NULL]
 #        openingStocksEstimated - shift(openingStocksEstimated, type = "lead"),
 #      by = list(geographicAreaM49, measuredItemCPC)]
 
+## For those countries/commodities that do not have the initial opening stocks
+data[, meanCummulated := 
+       cumsum(closingStocksEstimated) / seq_along(closingStocksEstimated), 
+     by = list(geographicAreaM49, measuredItemCPC)]
+
+data[, aux := replace(meanCummulated, is.na(openingStocksEstimated), meanCummulated[3]),
+     by=list(geographicAreaM49, measuredItemCPC)]
+
+data[is.na(openingStocksEstimated), openingStocksEstimated := aux]
+data[, c("meanCummulated", "aux") := NULL]
+
 data[, deltaStocksEstimated := openingStocksEstimated - closingStocksEstimated]
 
 setkey(data, geographicAreaM49, measuredItemCPC, timePointYears)
@@ -601,7 +612,7 @@ setcolorder(mixOfficialUnofficialFigures, c("timePointYears", "geographicAreaM49
 dataToSave <- rbindlist(list(onlyUnofficialFigures, onlyOfficialFigures, mixOfficialUnofficialFigures))
 dataToSave <- nameData("agriculture", "aproduction", dataToSave)
 # write.csv(dataToSave,
-#           "C:/Users/caetano/Documents/Github/faoswsStock/sandbox/validation/2016_10_19_final_result_stocks.csv",
+#           "C:/Users/caetano/Documents/Github/faoswsStock/sandbox/validation/2016_10_20_final_result_stocks.csv",
 #           row.names = F)
 
 ## We have to make a filter using just Protected != TRUE
