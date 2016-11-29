@@ -319,8 +319,11 @@ data[Protected_5113 == TRUE, openingStocksEstimatedUpdated := openingStocks_5113
 ## country/commodity all the values for this combination will go to 
 ## the "official data".
 
-data[Protected == TRUE | flagdeltaStocksBasedonOpening_5113 == 1, protectedFlag := TRUE]
-data[Protected == FALSE & flagdeltaStocksBasedonOpening_5113 == 0, protectedFlag := FALSE]
+data[Protected == TRUE | flagdeltaStocksBasedonOpening_5113 == 1 | Protected_5113 == TRUE, 
+     protectedFlag := TRUE]
+
+data[Protected == FALSE & flagdeltaStocksBasedonOpening_5113 == 0 & Protected_5113 == FALSE,
+     protectedFlag := FALSE]
 
 # tabOfficialData <- data[, list(flagOfficialData = max(protectedFlag)),
 #                      by = list(geographicAreaM49, measuredItemCPC)]
@@ -382,7 +385,7 @@ onlyUnofficialFigures[measuredElement == "5113" & Protected_5113 == T,
                       flagObservationStatus := ""]
 
 onlyUnofficialFigures[measuredElement == "5113" & Protected_5113 == F, 
-                      flagMethod := "i"]
+                      flagMethod := "e"]
 
 onlyUnofficialFigures[measuredElement == "5113" & Protected_5113 == T, 
                       flagMethod := flagMethod_5113]
@@ -408,17 +411,32 @@ onlyOfficialFigures[, c("deltaStocks", "production", "imports", "incomeGroup",
 setnames(onlyOfficialFigures, "deltaStocksUpdated", "deltaStocks")
 setnames(onlyOfficialFigures, "openingStocksEstimatedUpdated", "openingStocks")
 
+
+onlyOfficialFigures[Protected == TRUE & Protected_5113 == FALSE, 
+                    closingStocksUpdated := openingStocks[1] - cumsum(deltaStocks),
+                    by = list(geographicAreaM49, measuredItemCPC)]
+
+onlyOfficialFigures[, openingStocksUpdated := shift(closingStocksUpdated)]
+onlyOfficialFigures[is.na(openingStocksUpdated), openingStocksUpdated := openingStocks]
+onlyOfficialFigures[, deltaStocksUpdated := shift(shift(openingStocksUpdated) - openingStocksUpdated, type="lead"),
+                    by = list(geographicAreaM49, measuredItemCPC)]
+
+onlyOfficialFigures[is.na(deltaStocksUpdated), deltaStocksUpdated := deltaStocks]
+
+onlyOfficialFigures[, c("deltaStocks", "openingStocks", "closingStocksUpdated") := NULL]
+
+
 onlyOfficialFigures <- melt.data.table(
   onlyOfficialFigures, 
   id.vars = c("geographicAreaM49", "measuredItemCPC", "timePointYears", 
               "flagObservationStatus_5071", "flagMethod_5071", "Protected", 
               "flagObservationStatus_5113", "flagMethod_5113", "Protected_5113",
                "flagdeltaStocksBasedonOpening_5113", "flagMix"), 
-  measure.vars = c("deltaStocks", "openingStocks"))
+  measure.vars = c("deltaStocksUpdated", "openingStocksUpdated"))
 
 
-onlyOfficialFigures[variable == "deltaStocks", measuredElement := "5071"]
-onlyOfficialFigures[variable == "openingStocks", measuredElement := "5113"]
+onlyOfficialFigures[variable == "deltaStocksUpdated", measuredElement := "5071"]
+onlyOfficialFigures[variable == "openingStocksUpdated", measuredElement := "5113"]
 
 # flags for delta stocks
 onlyOfficialFigures[measuredElement == "5071" & Protected == F, 
@@ -539,38 +557,66 @@ mixOfficialUnofficialFigures[, openingFinal := shift(closingStocksUpdated),
 mixOfficialUnofficialFigures[is.na(openingFinal), openingFinal := initialStocksUpdated,
                              by=list(geographicAreaM49, measuredItemCPC)]
 
+## small adjustment
+mixOfficialUnofficialFigures[geographicAreaM49 == 203 & measuredItemCPC == "0111" & 
+                               timePointYears == "1991", openingFinal := 1219700]
+
+mixOfficialUnofficialFigures[geographicAreaM49 == 203 & measuredItemCPC == "0115" & 
+                               timePointYears == "1991", openingFinal := 297800]
+
+mixOfficialUnofficialFigures[geographicAreaM49 == 203 & measuredItemCPC == "0116" & 
+                               timePointYears == "1991", openingFinal := 297300]
+
+mixOfficialUnofficialFigures[geographicAreaM49 == 203 & measuredItemCPC == "0117" & 
+                               timePointYears == "1991", openingFinal := 30000]
+
+mixOfficialUnofficialFigures[geographicAreaM49 == 348 & measuredItemCPC == "01191" & 
+                               timePointYears == 1991, openingFinal := 10000]
+
+mixOfficialUnofficialFigures[geographicAreaM49 == 348 & measuredItemCPC == "01191" & 
+                               timePointYears == 1992, openingFinal := 10000]
+##
+
+mixOfficialUnofficialFigures[Protected_5113 == TRUE, openingFinal := openingStocksEstimatedUpdated]
+mixOfficialUnofficialFigures[openingFinal < 0, openingFinal := 0]
+mixOfficialUnofficialFigures[flagProtectComb == "opening_stocks_protected",
+                             deltaStocksUpdatedFinal := shift(shift(openingFinal) - openingFinal, type = "lead"), 
+                             by = list(geographicAreaM49, measuredItemCPC)]
+
+mixOfficialUnofficialFigures[is.na(deltaStocksUpdatedFinal), deltaStocksUpdatedFinal := deltaStocksUpdated]
+
 mixOfficialUnofficialFigures <- 
   mixOfficialUnofficialFigures[, c("geographicAreaM49", "measuredItemCPC", "timePointYears", 
-                         "flagObservationStatus_5071", "flagMethod_5071", "Protected", 
-                         "Protected_5113", "flagdeltaStocksBasedonOpening_5113", 
-                         "flagObservationStatus_5113", "flagMethod_5113", "openingFinal", 
-                         "deltaStocksUpdated", "protectedFlag", "minFlag", 
-                         "maxFlag", "flagMix", "flagProtectComb"), with = F]
+                                   "flagObservationStatus_5071", "flagMethod_5071", "Protected", 
+                                   "Protected_5113", "flagdeltaStocksBasedonOpening_5113", 
+                                   "flagObservationStatus_5113", "flagMethod_5113", "openingFinal", 
+                                   "deltaStocksUpdatedFinal", "protectedFlag", "minFlag", 
+                                   "maxFlag", "flagMix", "flagProtectComb"), with = F]
 
 mixOfficialUnofficialFigures <- melt.data.table(mixOfficialUnofficialFigures, 
-                                       id.vars = c("geographicAreaM49", "measuredItemCPC", 
-                                                   "timePointYears", 
-                                                   "flagObservationStatus_5071",
-                                                   "flagMethod_5071",
-                                                   "Protected", "Protected_5113",
-                                                   "flagdeltaStocksBasedonOpening_5113",
-                                                   "flagObservationStatus_5113", 
-                                                   "flagMethod_5113",
-                                                   "protectedFlag", "minFlag", 
-                                                   "maxFlag", "flagMix", "flagProtectComb"), 
-                                       measure.vars = c("deltaStocksUpdated", "openingFinal"))
+                                                id.vars = c("geographicAreaM49", "measuredItemCPC", 
+                                                            "timePointYears", 
+                                                            "flagObservationStatus_5071",
+                                                            "flagMethod_5071",
+                                                            "Protected", "Protected_5113",
+                                                            "flagdeltaStocksBasedonOpening_5113",
+                                                            "flagObservationStatus_5113", 
+                                                            "flagMethod_5113",
+                                                            "protectedFlag", "minFlag", 
+                                                            "maxFlag", "flagMix", "flagProtectComb"), 
+                                                measure.vars = c("deltaStocksUpdatedFinal", "openingFinal"))
 
 # Flags for delta stocks
-mixOfficialUnofficialFigures[Protected == T & variable == "deltaStocksUpdated", 
+mixOfficialUnofficialFigures[Protected == T & variable == "deltaStocksUpdatedFinal", 
                              flagObservationStatus := flagObservationStatus_5071]
 
-mixOfficialUnofficialFigures[Protected == F & variable == "deltaStocksUpdated", 
+mixOfficialUnofficialFigures[Protected == F & variable == "deltaStocksUpdatedFinal", 
                              flagObservationStatus := "I"]
 
-mixOfficialUnofficialFigures[Protected == T & variable == "deltaStocksUpdated",
+mixOfficialUnofficialFigures[Protected == T & variable == "deltaStocksUpdatedFinal",
                              flagMethod := flagMethod_5071]
 
-mixOfficialUnofficialFigures[Protected == F & variable == "deltaStocksUpdated", 
+mixOfficialUnofficialFigures[Protected == F & variable == "deltaStocksUpdatedFinal", 
                              flagMethod := "i"]
 
 # Flags for opening stocks
@@ -585,10 +631,10 @@ mixOfficialUnofficialFigures[Protected_5113 == T & variable == "openingFinal",
                              flagMethod := flagMethod_5113]
 
 mixOfficialUnofficialFigures[Protected_5113 == F & variable == "openingFinal",
-                             flagMethod := "i"]
+                             flagMethod := "e"]
 
 
-mixOfficialUnofficialFigures[variable == "deltaStocksUpdated", measuredElement := "5071"]
+mixOfficialUnofficialFigures[variable == "deltaStocksUpdatedFinal", measuredElement := "5071"]
 mixOfficialUnofficialFigures[variable == "openingFinal", measuredElement := "5113"]
 
 mixOfficialUnofficialFigures[, c("flagObservationStatus_5071", "flagMethod_5071",
@@ -629,7 +675,7 @@ dataToSaveDeltaStocks <- merge(dataToSaveDeltaStocks, stockData[, c("geographicA
 
 dataToSaveDeltaStocks[, diff := Value - deltaStocks]
 dataToSaveDeltaStocks[Protected == T]
-dataToSaveDeltaStocks[Protected == T & diff != 0]  # 7 cases for austria (wheat) and usa (rice) 
+dataToSaveDeltaStocks[Protected == T & diff != 0]  # 0 cases 
 
 ## Excluding Protected != T
 dataToSaveDeltaStocks[is.na(Protected), Protected := FALSE]
@@ -650,7 +696,9 @@ dataToSaveOpening <- merge(dataToSaveOpening, openingStockData[, c("geographicAr
                            "Protected_5113"), with = F], all.x = T)
 
 dataToSaveOpening[, diff := Value - openingStocks_5113]
-dataToSaveOpening[Protected_5113 == T & diff != 0] # 3 cases for austria and wheat
+dataToSaveOpening[Protected_5113 == T & diff != 0] # 1 case for usa and rice
+dataToSaveOpening[Protected_5113 == T & diff != 0, flagObservationStatus := "I"]
+dataToSaveOpening[Protected_5113 == T & diff != 0, flagMethod := "e"]
 
 ## Excluding Protected_5113 != T
 dataToSaveOpening[is.na(Protected_5113), Protected_5113 := FALSE]
