@@ -38,7 +38,7 @@ if(CheckDebug()){
 }
 
 initialYear = 1991
-finalYear = 2013
+finalYear = 2014
 
 ## Stocks
 stockCode <- "5071"
@@ -94,13 +94,26 @@ setnames(productionData, "flagObservationStatus", "flagObservationStatus_5510")
 setnames(productionData, "flagMethod", "flagMethod_5510")
 
 # ## Total Trade
+totalTradeDataSWS <- getTotalTradeData(as.character(2000:finalYear))
+totalTradeDataSWS <- dcast.data.table(totalTradeDataSWS, geographicAreaM49 + measuredItemCPC +
+                                        timePointYears ~ measuredElementTrade, value.var = "Value")
 
-totalTradeData <- getTotalTradeDataFAOSTAT1(as.character(initialYear:finalYear))
-totalTradeData <- dcast.data.table(totalTradeData, geographicAreaM49 + measuredItemCPC +
-                                     timePointYears ~ measuredElement, value.var = "Value")
 
-setnames(totalTradeData, "5610", "imports")
-setnames(totalTradeData, "5910", "exports")
+setnames(totalTradeDataSWS, "5610", "imports")
+setnames(totalTradeDataSWS, "5910", "exports")
+
+
+totalTradeDataFaostat <- getTotalTradeDataFAOSTAT1(as.character(initialYear:1999))
+
+totalTradeDataFaostat <- dcast.data.table(totalTradeDataFaostat, geographicAreaM49 + measuredItemCPC +
+                                        timePointYears ~ measuredElement, value.var = "Value")
+
+
+setnames(totalTradeDataFaostat, "5610", "imports")
+setnames(totalTradeDataFaostat, "5910", "exports")
+
+## Make a rbind between both total trade data from sws and faostat
+totalTradeData = rbind(totalTradeDataFaostat, totalTradeDataSWS)
 
 totalTradeData[is.na(imports), imports := 0]
 totalTradeData[is.na(exports), exports := 0]
