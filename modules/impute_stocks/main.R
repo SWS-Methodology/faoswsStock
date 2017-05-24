@@ -38,7 +38,7 @@ if(CheckDebug()){
 }
 
 initialYear = 1991
-finalYear = 2014
+finalYear = 2015
 
 ## Stocks
 stockCode <- "5071"
