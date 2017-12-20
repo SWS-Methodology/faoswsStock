@@ -15,11 +15,11 @@ getTotalTradeDataFAOSTAT1 <- function(yearRange) {
   fcl <- fcl[!is.na(fcl)]
   totalTradeKey = DatasetKey(
     domain = "faostat_one",
-    dataset = "FS1_SUA_UPD",
+    dataset = "updated_sua_2013_data",
     dimensions = list(
       Dimension(name = "geographicAreaFS",
                 keys = GetCodeList(domain = "faostat_one",
-                                   dataset = "FS1_SUA_UPD",
+                                   dataset = "updated_sua_2013_data",
                                    dimension = "geographicAreaFS")[type == "country", code]),
       Dimension(name = "measuredElementFS", keys = tradeCode),
       Dimension(name = "timePointYears", keys = yearRange),
