@@ -6,7 +6,7 @@ suppressMessages({
   library(faoswsUtil)
   library(faoswsFlag)
   library(countrycode)
-  library(faoswsStock)
+  # library(faoswsStock)
 })
 
 ## set up for the test environment and parameters
@@ -37,34 +37,91 @@ if(CheckDebug()){
   
 }
 
-initialYear = 1991
-finalYear = 2015
+# startYear = as.numeric(swsContext.computationParams$startYear)
+# endYear = as.numeric(swsContext.computationParams$endYear)
+startYear = 1990
+upToYear = 2013
+#startYear = 1989
+# endYear = 2016
+endYear = 2016
+# initialYear = 1991
+# finalYear = 2015
+
+##' Obtain the complete imputation Datakey
+completeImputationKey = getCompleteImputationKey("stocks")
 
 ## Stocks
 stockCode <- "5071"
 openingStockCode <- "5113"
-stockData <- getStockData(measuredElement = c(stockCode), 
-                          as.character(initialYear:finalYear))
-setnames(stockData, "Value", "deltaStocks")
+# stockData <- getStockData(measuredElement = c(stockCode),
+#                           as.character(startYear:endYear))
 
-## Opening stocks data
-openingStockData <- getStockData(measuredElement = c(openingStockCode),
-                                 as.character(initialYear:(finalYear+1)))
+keyStock = copy(completeImputationKey)
+keyStock@dimensions$measuredElement@keys = "5071"
+keyStock@dimensions$timePointYears@keys = as.character(startYear:(endYear))
+# stockData <- GetData(keyStock, flags = TRUE)
+m49 <- keyStock@dimensions$geographicAreaM49@keys
+m49 <- m49[!(m49 %in% c("831", "832"))]
+
+# cpc <- keyStock@dimensions$measuredItemCPC@keys
+
+stockDataUpTo2013 <- getFAOSTAT1Data(m49,
+                                completeImputationKey@dimensions$measuredItemCPC@keys,
+                                "71",
+                                yearRange = as.character(startYear:upToYear),
+                                "updated_sua_2013_data")
+
+setnames(stockDataUpTo2013, "Value", "deltaStocks")
+
+
+stockDataUpToEnd <- getFAOSTAT1Data(m49,
+                                     completeImputationKey@dimensions$measuredItemCPC@keys,
+                                     "71",
+                                     yearRange = as.character((upToYear + 1):endYear),
+                                     "updated_sua_data")
+
+setnames(stockDataUpToEnd, "Value", "deltaStocks")
+
+stockData <- rbind(stockDataUpTo2013, stockDataUpToEnd)
+
+## WARNING: the stocks data from the old system must be multiplied by -1 as in the
+## new system it's the opposite.
+
+stockData[, deltaStocks := deltaStocks * (-1)]
+
+## Opening stocks data: there's no data in the SUA table for opening. Then the best solution is
+## to keep on pulling data for this information from Agriculture/Aproduction
+
+# openingStockData <- getStockData(measuredElement = c(openingStockCode),
+#                                  as.character(startYear:(endYear+1)))
+keyOpening = copy(completeImputationKey)
+keyOpening@dimensions$measuredElement@keys = "5113"
+keyOpening@dimensions$timePointYears@keys = as.character(startYear:(endYear))
+openingStockData <- GetData(keyOpening, flags = T)
+# openingStockData <- getFAOSTAT1Data(m49,
+#                              completeImputationKey@dimensions$measuredItemCPC@keys,
+#                              "141",
+#                              yearRange = as.character((upToYear + 1):endYear),
+#                              "updated_sua_2013_data")
+
 setnames(openingStockData, "Value", "openingStocks")
+openingStockData[flagObservationStatus == "M" & flagMethod == "-", flagMethod := "u"]
 
 ## Merge stockData and openingStockData with the flagValidTable (specific for the stocks module)
-flagValidTableStocks <- fread(system.file("extdata/flagValidTable.csv", package = "faoswsStock"))
+# flagValidTableStocks <- fread(system.file("extdata/flagValidTable.csv", package = "faoswsStock"))
+
+## Warning: let's use flagValidTable from faoswsFlag
 
 keys = c("flagObservationStatus", "flagMethod")
 stockData <- merge(
-  stockData, flagValidTableStocks, by = keys, all.x = T
+  stockData, flagValidTable, by = keys, all.x = T
 )
 
 setnames(stockData, "flagObservationStatus", "flagObservationStatus_5071")
 setnames(stockData, "flagMethod", "flagMethod_5071")
 
 openingStockData <- merge(
-  openingStockData, flagValidTableStocks, by = keys, all.x = T
+  openingStockData, flagValidTable, by = keys, all.x = T
 )
 
 setnames(openingStockData, "flagObservationStatus", "flagObservationStatus_5113")
@@ -73,7 +130,7 @@ setnames(openingStockData, "flagMethod", "flagMethod_5113")
 ## Computing delta stocks based on opening stocks
 setkey(openingStockData, "geographicAreaM49", "measuredItemCPC", "timePointYears")
 
-openingStockData[, deltaStocksBasedonOpening := openingStocks - shift(openingStocks, type = "lead"), 
+openingStockData[, deltaStocksBasedonOpening := shift(openingStocks, type = "lead") - openingStocks, 
                   by = list(geographicAreaM49, measuredItemCPC)]
 
 ## This flag means whether the opening stocks used to computed the delta stocks are 
@@ -84,30 +141,53 @@ openingStockData[, flagdeltaStocksBasedonOpening_5113 := pmin(Protected, shift(P
 openingStockData[is.na(flagdeltaStocksBasedonOpening_5113), 
                  flagdeltaStocksBasedonOpening_5113 := 0]
 
-openingStockData <- openingStockData[timePointYears <= finalYear]
+openingStockData <- openingStockData[timePointYears <= endYear]
 
 ## Production
-productionData <- getProductionData(as.character(initialYear:finalYear))
+# keyProd = copy(completeImputationKey)
+# keyProd@dimensions$measuredElement@keys = "5510"
+# keyProd@dimensions$timePointYears@keys = as.character(startYear:(endYear))
+# productionData <- GetData(keyProd, flags = T)
+# 
+# # productionData <- getProductionData(as.character(startYear:endYear))
+# productionData[, c("measuredElement") := NULL]
+# setnames(productionData, "Value", "production")
+# setnames(productionData, "flagObservationStatus", "flagObservationStatus_5510")
+# setnames(productionData, "flagMethod", "flagMethod_5510")
+
+productionData <- read.csv("sandbox/Data/APR 2017-12-11 12_26_56/data.csv", 
+                           colClasses = "character")
+productionData <- data.table(productionData)
+productionData[, timePointYears := as.numeric(timePointYears)]
+productionData[, Value := as.numeric(Value)]
+
+productionData <- productionData[timePointYears >= startYear & timePointYears <= endYear]
+setnames(productionData, old = c("Status", "Method"),
+         new = c("flagObservationStatus", "flagMethod"))
+productionData[, c("Geographic.Area", "Item", "Element", "Year") := NULL]
+
+# productionData <- getProductionData(as.character(startYear:endYear))
 productionData[, c("measuredElement") := NULL]
 setnames(productionData, "Value", "production")
 setnames(productionData, "flagObservationStatus", "flagObservationStatus_5510")
 setnames(productionData, "flagMethod", "flagMethod_5510")
 
+
 # ## Total Trade
-totalTradeDataSWS <- getTotalTradeData(as.character(2000:finalYear))
+
+# New trade
+totalTradeDataSWS <- getTotalTradeData(as.character((upToYear + 1):endYear))
 totalTradeDataSWS <- dcast.data.table(totalTradeDataSWS, geographicAreaM49 + measuredItemCPC +
                                         timePointYears ~ measuredElementTrade, value.var = "Value")
-
 
 setnames(totalTradeDataSWS, "5610", "imports")
 setnames(totalTradeDataSWS, "5910", "exports")
 
-
-totalTradeDataFaostat <- getTotalTradeDataFAOSTAT1(as.character(initialYear:1999))
+# Old trade
+totalTradeDataFaostat <- getTotalTradeDataFAOSTAT1(as.character(startYear:upToYear))
 
 totalTradeDataFaostat <- dcast.data.table(totalTradeDataFaostat, geographicAreaM49 + measuredItemCPC +
                                         timePointYears ~ measuredElement, value.var = "Value")
-
 
 setnames(totalTradeDataFaostat, "5610", "imports")
 setnames(totalTradeDataFaostat, "5910", "exports")
@@ -138,9 +218,39 @@ setnames(countryIncomeGroup, "GroupName", "incomeGroup")
 
 ## Merge Stocks, Production, Total Trade and Income
 keys <- c("geographicAreaM49", "measuredItemCPC", "timePointYears")
-data <- merge(stockData, productionData[, c(keys, "production"), with=F], by = keys, all = T)
+productionData[, timePointYears := as.character(timePointYears)]
+data <- merge(stockData, productionData[, c(keys, "production"), with=F], 
+              by = keys, all = T)
 data <- merge(data, totalTradeData[, c(keys, "imports"), with = F],
               by = keys, all = T)
+
+
+## Expand data for 2017
+nextYearData <- as.data.table(expand.grid(geographicAreaM49 = as.character(unique(data$geographicAreaM49)),
+                                          measuredItemCPC = unique(data$measuredItemCPC),
+                                          timePointYears = as.character(endYear + 1),
+                                          flagObservationStatus_5071 = NA,
+                                          flagMethod_5071 = NA,
+                                          measuredElemet = NA,
+                                          deltaStocks = NA,
+                                          Valid = NA,
+                                          Protected = NA,
+                                          production = NA,
+                                          imports = NA))
+
+nextYearData[, geographicAreaM49 := as.character(geographicAreaM49)]
+nextYearData[, measuredItemCPC := as.character(measuredItemCPC)]
+nextYearData[, timePointYears := as.character(timePointYears)]
+nextYearData[, flagObservationStatus_5071 := as.character(flagObservationStatus_5071)]
+nextYearData[, flagMethod_5071 := as.character(flagMethod_5071)]
+nextYearData[, measuredElemet := as.character(measuredElemet)]
+nextYearData[, deltaStocks := as.numeric(deltaStocks)]
+nextYearData[, production := as.numeric(production)]
+nextYearData[, imports := as.numeric(imports)]
+
+# Combine with the data
+data <- rbind(data, nextYearData, fill = T)
+
 data <- merge(data, countryIncomeGroup[, c("geographicAreaM49", "incomeGroup"), 
                                        with = F], by = "geographicAreaM49", all.x=T)
 
@@ -244,7 +354,7 @@ data[itemGroup == "refined_sugar" & region == "Others countries" &
        coefficients_sugar[names.coef. == "supply:country_groupdeveloping", coef] * totalSupply]
 
 ## Opening Stocks computed from delta stocks as a cumulated sum
-tabOpeningStocksFromDelta <- computeOpeningStocksfromDelta(initialYear)
+tabOpeningStocksFromDelta <- computeOpeningStocksfromDelta(startYear)
 
 # Computing opening and delta stocks
 data[closingStocksEstimated < 0, closingStocksEstimated := 0]
@@ -254,7 +364,7 @@ data[, openingStocksEstimated := shift(closingStocksEstimated),
      by = list(geographicAreaM49, measuredItemCPC)]
 
 data <- merge(data, tabOpeningStocksFromDelta, all.x = T)
-data[timePointYears == 1991, openingStocksEstimated := openingStocks]
+data[timePointYears == startYear, openingStocksEstimated := openingStocks]
 data[, "openingStocks" := NULL]
 
 # data[, deltaStocksEstimated := c(0, diff(closingStocksEstimated)),
@@ -274,20 +384,20 @@ data[, aux := replace(meanCummulated, is.na(openingStocksEstimated), meanCummula
 data[is.na(openingStocksEstimated), openingStocksEstimated := aux]
 data[, c("meanCummulated", "aux") := NULL]
 
-data[, deltaStocksEstimated := openingStocksEstimated - closingStocksEstimated]
+data[timePointYears <= endYear, deltaStocksEstimated := closingStocksEstimated - openingStocksEstimated]
 
 setkey(data, geographicAreaM49, measuredItemCPC, timePointYears)
 
 ## We will not use the data when total supply is zero.
-zeroSupply <- data[totalSupply == 0, .N, c("geographicAreaM49", "measuredItemCPC")]
-zeroSupply[, flagExclude := 1]
-
-data <- merge(data, zeroSupply[, c("geographicAreaM49", "measuredItemCPC", "flagExclude"), with=F],
-      all.x = T)
-
-data[is.na(flagExclude), flagExclude := 0]
-data <- data[flagExclude != 1]
-data[, c("flagExclude") := NULL]
+# zeroSupply <- data[totalSupply == 0, .N, c("geographicAreaM49", "measuredItemCPC")]
+# zeroSupply[, flagExclude := 1]
+# 
+# data <- merge(data, zeroSupply[, c("geographicAreaM49", "measuredItemCPC", "flagExclude"), with=F],
+#       all.x = T)
+# 
+# data[is.na(flagExclude), flagExclude := 0]
+# data <- data[flagExclude != 1]
+# data[, c("flagExclude") := NULL]
 
 ## There are two sources of information for delta stocks. Pulled this information
 ## directly or compute delta stocks as a function of opening stocks. There are
@@ -322,6 +432,8 @@ data[Protected == TRUE & flagdeltaStocksBasedonOpening_5113 == 0,
 
 data[flagdeltaStocksBasedonOpening_5113 == 1, 
      deltaStocksUpdated := deltaStocksBasedonOpening_5113]
+
+data[Protected == TRUE, deltaStocksUpdated := deltaStocks]
 
 ## Updating opening stocks
 data[Protected_5113 == FALSE, openingStocksEstimatedUpdated := openingStocksEstimated]
@@ -509,14 +621,17 @@ mixOfficialUnofficialFigures[, c("deltaStocks", "Valid", "production", "imports"
 
 ## Let`s compute the cumsum for the deltaStocksUpdated by country and commodity
 mixOfficialUnofficialFigures[, minorsDeltaStocksUpdatedCummulated := 
-                               cumsum(ifelse(is.na(deltaStocksUpdated), 0, deltaStocksUpdated * (-1))),
+                               # cumsum(ifelse(is.na(deltaStocksUpdated), 0, deltaStocksUpdated * (-1))),
+                               cumsum(ifelse(is.na(deltaStocksUpdated), 0, deltaStocksUpdated * (1))),
      by = list(geographicAreaM49, measuredItemCPC)]
 
 # mixOfficialUnofficialFigures[, deltaStocksUpdatedCummulated := 
 #                                cumsum(ifelse(is.na(deltaStocksUpdated), 0, deltaStocksUpdated)),
 #                              by = list(geographicAreaM49, measuredItemCPC)]
 
-initialStocks <- mixOfficialUnofficialFigures[, list(initialStocks = min(minorsDeltaStocksUpdatedCummulated, na.rm=T) * -1,
+initialStocks <- mixOfficialUnofficialFigures[, list(
+  # initialStocks = min(minorsDeltaStocksUpdatedCummulated, na.rm=T) * -1,
+  initialStocks = min(minorsDeltaStocksUpdatedCummulated, na.rm=T) * 1,
                              # valueAdd = mean(openingStocksEstimated, na.rm = T),
                              timePointYears = min(as.numeric(timePointYears))),
      by = list(geographicAreaM49, measuredItemCPC)]
@@ -571,32 +686,33 @@ mixOfficialUnofficialFigures[is.na(openingFinal), openingFinal := initialStocksU
                              by=list(geographicAreaM49, measuredItemCPC)]
 
 ## small adjustment
-mixOfficialUnofficialFigures[geographicAreaM49 == 203 & measuredItemCPC == "0111" & 
-                               timePointYears == "1991", openingFinal := 1219700]
+# mixOfficialUnofficialFigures[geographicAreaM49 == 203 & measuredItemCPC == "0111" & 
+#                                timePointYears == "1991", openingFinal := 1219700]
 
-mixOfficialUnofficialFigures[geographicAreaM49 == 203 & measuredItemCPC == "0115" & 
-                               timePointYears == "1991", openingFinal := 297800]
+# mixOfficialUnofficialFigures[geographicAreaM49 == 203 & measuredItemCPC == "0115" & 
+#                                timePointYears == "1991", openingFinal := 297800]
 
-mixOfficialUnofficialFigures[geographicAreaM49 == 203 & measuredItemCPC == "0116" & 
-                               timePointYears == "1991", openingFinal := 297300]
+# mixOfficialUnofficialFigures[geographicAreaM49 == 203 & measuredItemCPC == "0116" & 
+#                                timePointYears == "1991", openingFinal := 297300]
 
-mixOfficialUnofficialFigures[geographicAreaM49 == 203 & measuredItemCPC == "0117" & 
-                               timePointYears == "1991", openingFinal := 30000]
+# mixOfficialUnofficialFigures[geographicAreaM49 == 203 & measuredItemCPC == "0117" & 
+#                                timePointYears == "1991", openingFinal := 30000]
 
-mixOfficialUnofficialFigures[geographicAreaM49 == 348 & measuredItemCPC == "01191" & 
-                               timePointYears == 1991, openingFinal := 10000]
-
-mixOfficialUnofficialFigures[geographicAreaM49 == 348 & measuredItemCPC == "01191" & 
-                               timePointYears == 1992, openingFinal := 10000]
+## check that later on
+# mixOfficialUnofficialFigures[geographicAreaM49 == 348 & measuredItemCPC == "01191" & 
+#                                timePointYears == 1991, openingFinal := 10000]
+# 
+# mixOfficialUnofficialFigures[geographicAreaM49 == 348 & measuredItemCPC == "01191" & 
+#                                timePointYears == 1992, openingFinal := 10000]
 ##
 
 mixOfficialUnofficialFigures[Protected_5113 == TRUE, openingFinal := openingStocksEstimatedUpdated]
 mixOfficialUnofficialFigures[openingFinal < 0, openingFinal := 0]
 mixOfficialUnofficialFigures[flagProtectComb == "opening_stocks_protected",
-                             deltaStocksUpdatedFinal := shift(shift(openingFinal) - openingFinal, type = "lead"), 
+                             deltaStocksUpdatedFinal := shift(openingFinal, type = "lead") - openingFinal, 
                              by = list(geographicAreaM49, measuredItemCPC)]
 
-mixOfficialUnofficialFigures[is.na(deltaStocksUpdatedFinal), deltaStocksUpdatedFinal := deltaStocksUpdated]
+mixOfficialUnofficialFigures[is.na(deltaStocksUpdatedFinal) & timePointYears != (endYear + 1), deltaStocksUpdatedFinal := deltaStocksUpdated]
 
 mixOfficialUnofficialFigures <- 
   mixOfficialUnofficialFigures[, c("geographicAreaM49", "measuredItemCPC", "timePointYears", 
@@ -668,8 +784,9 @@ setcolorder(mixOfficialUnofficialFigures, c("timePointYears", "geographicAreaM49
 ## save the data set to SWS.
 
 ## Save data
-dataToSave <- rbindlist(list(onlyUnofficialFigures, onlyOfficialFigures, mixOfficialUnofficialFigures))
-dataToSave <- nameData("agriculture", "aproduction", dataToSave)
+# dataToSave <- rbindlist(list(onlyUnofficialFigures, onlyOfficialFigures, mixOfficialUnofficialFigures))
+dataToSave <- rbindlist(list(onlyUnofficialFigures, mixOfficialUnofficialFigures))
+dataToSave <- nameData("Stock", "stocksdata", dataToSave)
 # write.csv(dataToSave,
 #           "C:/Users/caetano/Documents/Github/faoswsStock/sandbox/validation/2016_10_20_final_result_stocks.csv",
 #           row.names = F)
@@ -692,7 +809,7 @@ dataToSaveDeltaStocks[Protected == T & diff != 0]  # 0 cases
 
 ## Excluding Protected != T
 dataToSaveDeltaStocks[is.na(Protected), Protected := FALSE]
-dataToSaveDeltaStocks <- dataToSaveDeltaStocks[Protected == FALSE]
+#dataToSaveDeltaStocks <- dataToSaveDeltaStocks[Protected == FALSE]
 
 dataToSaveDeltaStocks[, c("timePointYears_description", "geographicAreaM49_description", 
                       "measuredItemCPC_description", "measuredElement_description",
@@ -715,7 +832,7 @@ dataToSaveOpening[Protected_5113 == T & diff != 0, flagMethod := "e"]
 
 ## Excluding Protected_5113 != T
 dataToSaveOpening[is.na(Protected_5113), Protected_5113 := FALSE]
-dataToSaveOpening <- dataToSaveOpening[Protected_5113 == FALSE]
+# dataToSaveOpening <- dataToSaveOpening[Protected_5113 == FALSE]
 
 dataToSaveOpening[, c("timePointYears_description", "geographicAreaM49_description", 
                       "measuredItemCPC_description", "measuredElement_description",
@@ -730,11 +847,15 @@ setcolorder(dataFinalToSave,
               "measuredElement", "Value", "flagObservationStatus", "flagMethod"))
 
 dataFinalToSave <- dataFinalToSave[!is.na(Value)]
+dataFinalToSave <- dataFinalToSave[timePointYears <= endYear]
 
 ###
-stats = SaveData(domain = "agriculture", dataset = "aproduction", data = dataFinalToSave)
+dataFinalToSave <- dataFinalToSave[geographicAreaM49 %in% c(360, 454, 484, 686, 1248, 392, 716)]
 
-paste0(stats$inserted, " observations written, ",
+stats = SaveData(domain = "Stock", dataset = "stocksdata", data = dataFinalToSave)
+
+paste0("Module completed successfully!!! ",
+       stats$inserted, " observations written, ",
        stats$ignored, " weren't updated, ",
        stats$discarded, " had problems.")
 
