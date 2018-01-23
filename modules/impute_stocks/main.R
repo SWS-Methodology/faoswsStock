@@ -88,6 +88,7 @@ stockData <- rbind(stockDataUpTo2013, stockDataUpToEnd)
 ## new system it's the opposite.
 
 stockData[, deltaStocks := deltaStocks * (-1)]
+stockData[flagObservationStatus == "M" & flagMethod == "-", flagMethod := "u"]
 
 ## Opening stocks data: there's no data in the SUA table for opening. Then the best solution is
 ## to keep on pulling data for this information from Agriculture/Aproduction
@@ -144,30 +145,35 @@ openingStockData[is.na(flagdeltaStocksBasedonOpening_5113),
 openingStockData <- openingStockData[timePointYears <= endYear]
 
 ## Production
-# keyProd = copy(completeImputationKey)
-# keyProd@dimensions$measuredElement@keys = "5510"
-# keyProd@dimensions$timePointYears@keys = as.character(startYear:(endYear))
-# productionData <- GetData(keyProd, flags = T)
-# 
+keyProd = copy(completeImputationKey)
+keyProd@dimensions$measuredElement@keys = "5510"
+keyProd@dimensions$timePointYears@keys = as.character(startYear:(2015))
+productionData <- GetData(keyProd, flags = T)
+productionData[, c("measuredElement") := NULL]
+
 # # productionData <- getProductionData(as.character(startYear:endYear))
 # productionData[, c("measuredElement") := NULL]
 # setnames(productionData, "Value", "production")
 # setnames(productionData, "flagObservationStatus", "flagObservationStatus_5510")
 # setnames(productionData, "flagMethod", "flagMethod_5510")
 
-productionData <- read.csv("sandbox/Data/APR 2017-12-11 12_26_56/data.csv", 
+productionData2016 <- read.csv("sandbox/Data/APR 2017-12-11 12_26_56/data.csv", 
                            colClasses = "character")
-productionData <- data.table(productionData)
-productionData[, timePointYears := as.numeric(timePointYears)]
-productionData[, Value := as.numeric(Value)]
+productionData2016 <- data.table(productionData2016)
+productionData2016[, timePointYears := as.numeric(timePointYears)]
+productionData2016[, Value := as.numeric(Value)]
+productionData2016 <- productionData2016[timePointYears == 2016]
 
-productionData <- productionData[timePointYears >= startYear & timePointYears <= endYear]
-setnames(productionData, old = c("Status", "Method"),
+# productionData <- productionData[timePointYears >= startYear & timePointYears <= endYear]
+setnames(productionData2016, old = c("Status", "Method"),
          new = c("flagObservationStatus", "flagMethod"))
-productionData[, c("Geographic.Area", "Item", "Element", "Year") := NULL]
+productionData2016[, c("Geographic.Area", "Item", "Element", "Year") := NULL]
 
 # productionData <- getProductionData(as.character(startYear:endYear))
-productionData[, c("measuredElement") := NULL]
+productionData2016[, c("measuredElement") := NULL]
+
+
+productionData <- rbind(productionData, productionData2016)
 setnames(productionData, "Value", "production")
 setnames(productionData, "flagObservationStatus", "flagObservationStatus_5510")
 setnames(productionData, "flagMethod", "flagMethod_5510")
@@ -850,7 +856,7 @@ dataFinalToSave <- dataFinalToSave[!is.na(Value)]
 dataFinalToSave <- dataFinalToSave[timePointYears <= endYear]
 
 ###
-dataFinalToSave <- dataFinalToSave[geographicAreaM49 %in% c(360, 454, 484, 686, 1248, 392, 716)]
+#dataFinalToSave <- dataFinalToSave[geographicAreaM49 %in% c(360, 454, 484, 686, 1248, 392, 716)]
 
 stats = SaveData(domain = "Stock", dataset = "stocksdata", data = dataFinalToSave)
 
