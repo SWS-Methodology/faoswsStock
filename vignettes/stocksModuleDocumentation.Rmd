@@ -1,0 +1,160 @@
+---
+title: "Plugin: Stocks Imputation"
+author:
+- Bruno Caetano Vidigal\
+  
+  Food and Agriculture Organization of the United Nations
+abstract: |
+  The stocks module imputes the amount of **changes in stocks**. The module estimates Closing Stocks as function of Supply. Then, it computes the changes in stocks and opening stocks. All tables and graphs present in this documentation are just examples. More details on the data are given in the code.
+date: "`r format(Sys.time(), '%e %B %Y')`"
+geometry: margin=1in
+output:
+  pdf_document:
+    pandoc_args: [
+    --tab-stop=2
+    ]
+    number_sections: true
+---
+
+```{r setup, echo=FALSE}
+options(warn=-1)
+knitr::opts_chunk$set(echo = FALSE)
+library(knitr)
+library(pander)
+library(data.table)
+# File in vignettes/Documentation
+# examples <- readRDS('examples.rds')
+
+examples <- readRDS('C:/Users/caetano/Documents/Github/faoswsStock/vignettes/stockExamples.RDS')
+
+coefCerealsPulses <- fread('C:/Users/caetano/Documents/Github/faoswsStock/vignettes/coefficients_cereals_pulses.csv')
+
+coefSugar <- fread('C:/Users/caetano/Documents/Github/faoswsStock/vignettes/coef_sugar.csv')
+```
+
+# Input Data and reference files
+
+## Stocks data
+
+The module uses two variables related to **stocks**: *Stock Variation* and *Opening Stocks*. The first one is stored in two different datasets: Updated SUA 2013 data and SUA Validated 2015.
+
+The opening stocks variable is found in the dataset Aproduction.
+
+### Updated SUA 2013
+
+The dataset **Updated SUA 2013** is under the domain **FAOSTAT 1**, element code **71**. This dataset contains validated data up to 2013 at FAO Code List (FCL). The data come from the old methodology and the values for **Stock** must be multiplied by *-1* to be compliant with the new system. 
+
+- `geographicAreaFS`: country code FS
+- `measuredElementFS`: element code (Variation Intial Exstenc)
+- `measuredItemFS`: item code
+- `timePointYears`: year
+- `Value`: value
+- `flagFaostat`: flag. 
+
+```{r}
+pander(examples$updatedSUA2013, row.names = FALSE, caption =
+'Subset of Updated SUA 2013 dataset', digits = 2, split.table = 100)
+```
+
+### SUA Validated 2015
+
+The dataset **SUA Validated 2015** is in the domain **SUA/FBS Domain**. It contains the items already converted to cpc,countries to M49 country code and flags in the new system.
+
+```{r}
+pander(examples$stockDataFrom2000, row.names = FALSE, caption =
+'Subset of SUA Validated 2015 dataset', digits = 2, split.table = 100)
+```
+
+The data do not need to be multiplied by *-1*.
+
+### Aproduction
+
+This dataset contains the information for **Opening Stocks** under the element code 5113.
+
+```{r}
+pander(examples$openingStockData, row.names = FALSE, caption =
+'Subset of Aproduction dataset (Opening Stocks)', digits = 2, split.table = 100)
+```
+
+## Production Data
+
+The production data are found also in the dataset **Aproduction** in the domain **Agriculture**, element code 5510.
+
+```{r}
+pander(examples$productionData, row.names = FALSE, caption =
+'Subset of Agriculture dataset (Production)', digits = 2, split.table = 100)
+```
+
+## Total Trade Data
+
+The **Total Trade Data** are found in the domain Trade, elements 5610 and 5910.
+
+```{r}
+pander(examples$totalTradeData, row.names = FALSE, caption =
+'Subset of Total Trade dataset', digits = 2, split.table = 100)
+```
+
+## Country Group
+
+It is a table in *Datatables*, domain Stock. This table comes from the World Bank. The four income groups we use are:
+
+- HIC: High Income
+- UMC: Upper middle income
+- LMC: Lower middle income
+- LIC: Low income
+
+
+```{r}
+pander(examples$countryGroup, row.names = FALSE, caption =
+'Subset of Country Group table', digits = 2, split.table = 100)
+```
+
+## Coefficients
+
+These coefficients come from a linear regression fitted using external data.
+
+### Cereals and Pulses
+
+A statistical model was fitted for the two groups of commodities using data from AMIS: cereals and pulses.
+
+- Dependent variable: closing stocks
+- Independent variable: total supply, region (EU, USA, Other countries) and the group of commodity (cereals and pulses).
+
+More information about this model is found in the document **Description Amis Analysis**.
+
+```{r}
+pander(coefCerealsPulses, caption =
+'Coefficients of the model for cereals and pulses', digits = 2, split.table = 100)
+```
+
+### Sugar
+
+Another statistical model was fitted for sugar using data from F.O. Lichts.
+
+- Dependent variable: closing stocks
+- Independent variable: total supply and country income group.
+
+More information about this model is found in the document **Description FO Lichts**.
+
+```{r}
+pander(coefSugar, caption =
+'Coefficients of the model for sugar', digits = 2, split.table = 100)
+```
+
+# Process
+
+The imputation process takes place after all above tables are pulled from the SWS. The process is straightforward and is split in five steps:
+
+1. Estimate $ClosingStocks_{t}$ based on total availability for each country, commodity and year. In this step we apply the coefficients fitted in the models described above;
+
+2. Compute $OpeningStocks_{t}$ as: $OpeningStocks_{t}$ = $ClosingStocks_{t-1}$;
+
+3. Compute $Delta Stocks_{t}$ as: $Delta Stocks_{t}$ = $ClosingStocks_{t}$ - $OpeningStocks_{t}$;
+
+4. Integrate official data for $Delta Stocks_{t}$ with the estimates from the step 3;
+
+5. Recalculate the $ClosingStocks_{t}$, $OpeningStocks_{t}$ and $Delta Stocks_{t}$ estimates, remaining only the official values.
+
+
+
+
