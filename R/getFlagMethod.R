@@ -12,7 +12,8 @@ getFlagMethod <- function(flags){
     
     new_flags <- rep(NA_character_, length(flags))
     
-    flags <- trimws(flags)
+    #flags <- trimws(flags)
+    flags <- sub(" +$", "", sub("^ +", "", flags))
     
     new_flags[nchar(flags) > 1L] <- paste0("#", new_flags[nchar(flags) > 1L])
     new_flags[nchar(flags) == 0L] <- "-"
