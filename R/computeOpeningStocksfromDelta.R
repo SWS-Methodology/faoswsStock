@@ -13,7 +13,8 @@ computeOpeningStocksfromDelta <- function(year) {
   
   yearRange = as.character(1961:(year - 1))
   # stockCode <- "5071"
-  keyStock = copy(completeImputationKey)
+  # keyStock = copy(completeImputationKey)
+  keyStock <- copy(keyStock)
   # keyStock@dimensions$measuredElement@keys = "5071"
   # keyStock@dimensions$timePointYears@keys = as.character(startYear:(endYear))
   # stockData <- GetData(keyStock, flags = TRUE)
@@ -24,7 +25,7 @@ computeOpeningStocksfromDelta <- function(year) {
   #                                yearRange)
   
   deltaStockData <- getFAOSTAT1Data(m49,
-                                    completeImputationKey@dimensions$measuredItemCPC@keys,
+                                    keyStock@dimensions$measuredItemCPC@keys,
                                     "71",
                                     yearRange = yearRange,
                                     "updated_sua_2013_data")
