@@ -9,7 +9,7 @@
 ##' @param yearRange Character vector with the range of the years.
 ##' @param dataset String with the id name of the dataset in the domain FAOSTAT1. 
 ##'
-##' @return The dataset with the food data.
+##' @return The dataset with the stock data.
 ##'
 ##' @export
 ##'
@@ -20,7 +20,7 @@ getFAOSTAT1Data <- function(geographicAreaM49, measuredItemCPC, component, yearR
     fcl = fcl[!is.na(fcl)]
     countryFS =  suppressWarnings(m492fs(geographicAreaM49))
     countryFS = countryFS[!is.na(countryFS)]
-    foodKey = DatasetKey(
+    stockKey = DatasetKey(
         domain = "faostat_one",
         dataset = dataset,
         dimensions = list(
@@ -33,24 +33,25 @@ getFAOSTAT1Data <- function(geographicAreaM49, measuredItemCPC, component, yearR
         )
     )
     
-    foodData = GetData(
-        foodKey,
+    stockata = GetData(
+      stockKey,
         flags = TRUE)
     
-    foodData[, geographicAreaM49 := fs2m49(geographicAreaFS)]
-    foodData[, measuredItemCPC := fcl2cpc(formatC(as.numeric(measuredItemFS), width = 4,
+    if(nrow(stockata) > 0) {
+      stockata[, geographicAreaM49 := fs2m49(geographicAreaFS)]
+      stockata[, measuredItemCPC := fcl2cpc(formatC(as.numeric(measuredItemFS), width = 4,
                                                         flag = "0"))]
     
-    foodData[, flagObservationStatus := getFlagObservationStatus(flagFaostat)]
-    foodData[, flagMethod := getFlagMethod(flagFaostat)]    
+      stockata[, flagObservationStatus := getFlagObservationStatus(flagFaostat)]
+      stockata[, flagMethod := getFlagMethod(flagFaostat)]    
     
-    # foodData[, measuredElement := "5141"]
-    foodData[, c("geographicAreaFS", "measuredItemFS", "flagFaostat") := NULL]
+      stockata[, c("geographicAreaFS", "measuredItemFS", "flagFaostat") := NULL]
     
-    setcolorder(foodData, c("geographicAreaM49", "measuredElementFS",
+    setcolorder(stockata, c("geographicAreaM49", "measuredElementFS",
                                   "measuredItemCPC", "Value", "timePointYears",
                                   "flagObservationStatus", "flagMethod"))
 
-    foodData <- foodData[!is.na(geographicAreaM49)]
+    stockata <- stockata[!is.na(geographicAreaM49)]
     
+} else {stop('Empty data.table (0 rows)')}
 }
