@@ -114,7 +114,7 @@ stockSua2015Key = DatasetKey(
   )
 )
 
-stockDataFrom2000 <- GetData(stockSua2015Key, flags = TRUE)
+stockDataFrom2000 <- GetData(stockSua2015Key)
 
 setnames(stockDataFrom2000, old = c("measuredElementSuaFbs", "measuredItemFbsSua", "Value"),
          new = c("measuredElement", "measuredItemCPC", "deltaStocks"))
@@ -129,7 +129,8 @@ keyOpening@domain <- "agriculture"
 keyOpening@dataset <- "aproduction"
 keyOpening@dimensions$measuredElement@keys = "5113"
 keyOpening@dimensions$timePointYears@keys = as.character(minYearToProcess:(maxYearToProcess))
-openingStockData <- GetData(keyOpening, flags = T)
+
+openingStockData <- GetData(keyOpening)
 setnames(openingStockData, "Value", "openingStocks")
 openingStockData[flagObservationStatus == "M" & flagMethod == "-", flagMethod := "u"]
 
@@ -176,7 +177,7 @@ keyProd@dataset <- "aproduction"
 keyProd@dimensions$measuredElement@keys = "5510"
 keyProd@dimensions$timePointYears@keys = as.character(minYearToProcess:(maxYearToProcess))
 
-productionData <- GetData(keyProd, flags = T)
+productionData <- GetData(keyProd)
 
 productionData[, c("measuredElement") := NULL]
 setnames(productionData, old = c("Value", "flagObservationStatus", "flagMethod"),
@@ -191,6 +192,7 @@ keyNewTrade@dimensions$measuredElement@keys = c("5610", "5910")
 keyNewTrade@dimensions$timePointYears@keys = as.character(minYearToProcess:(maxYearToProcess))
 keyNewTrade@domain = "trade"
 keyNewTrade@dataset = "total_trade_cpc_m49"
+
 totalTradeData <- GetData(keyNewTrade, flags = FALSE)
 
 totalTradeData <- dcast.data.table(totalTradeData, geographicAreaM49 + measuredItemCPC +
