@@ -227,9 +227,15 @@ data <- merge(data, totalTradeData[, c(keys, "imports"), with = FALSE],
               by = keys, all = T)
 
 ## Expand data for maxYearToProcess + 1
-nextYearData <- data[, .SD[timePointYears == maxYearToProcess], by = .(geographicAreaM49, measuredItemCPC)]
-
-nextYearData[, setdiff(names(x), c('geographicAreaM49', 'measuredItemCPC', 'timePointYears')) := NA]
+nextYearData <-
+  data[,
+    # XXX: shouldn't the condition be .SD[as.numeric(timePointYears) == max(.SD$timePointYears)]
+    .SD[timePointYears == maxYearToProcess], by = .(geographicAreaM49, measuredItemCPC)
+  ][,
+    timePointYears := as.character(as.numeric(timePointYears) + 1)
+  ][,
+    setdiff(names(x), c('geographicAreaM49', 'measuredItemCPC', 'timePointYears')) := NA
+  ]
 
 # Combine with the data
 data <- rbind(data, nextYearData, fill = T)
@@ -318,7 +324,7 @@ data[,
     )
 ]
 
-data <- dplyr::select(data, -dplyr::starts_with('coef_'))
+data[, names(data)[grepl('coef_', names(data))] := NULL]
 
 ## Opening Stocks computed from delta stocks as a cumulated sum
 tabOpeningStocksFromDelta <- computeOpeningStocksfromDelta(minYearToProcess)
