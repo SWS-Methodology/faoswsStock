@@ -255,9 +255,32 @@ setkey(data, geographicAreaM49, measuredItemCPC, timePointYears)
 # coefficients_cereals_pulses <- fread(system.file("extdata/coefficients_cereals_pulses.csv", package = "faoswsStock"))
 coefficients_cereals_pulses <- ReadDatatable("coefficients_cereals_pulses")
 
+coefficients_cereals_pulses[,
+  names_coef :=
+    dplyr::case_when(
+      names_coef == '(Intercept)'                                ~ 'coef_pc_intercept',
+      names_coef == 'totalSupply'                                ~ 'coef_pc_supply',
+      names_coef == 'totalSupply:regionOthers countries'         ~ 'coef_pc_others',
+      names_coef == 'totalSupply:regionUnited States of America' ~ 'coef_pc_usa',
+      names_coef == 'totalSupply:typepulses'                     ~ 'coef_pc_pulses'
+    )
+]
+
+coefficients_cereals_pulses <- tidyr::spread(coefficients_cereals_pulses, names_coef, coef)
+
 # Fo_Licht coefficients
 # coefficients_sugar <- fread(system.file("extdata/coefficients_sugar.csv", package = "faoswsStock"))
 coefficients_sugar <- ReadDatatable("coefficients_sugar")
+
+coefficients_sugar[,
+  names_coef :=
+    dplyr::case_when(
+      names_coef == 'supply'                         ~ 'coef_su_supply',
+      names_coef == 'supply:country_groupdeveloping' ~ 'coef_su_developing'
+    )
+]
+
+coefficients_sugar <- tidyr::spread(coefficients_sugar, names_coef, coef)
 
 # Excluding countries that does not have classification for "income"
 data <- data[!is.na(incomeGroup)]
@@ -267,65 +290,35 @@ data[geographicAreaM49 == 840, region := "United States of America"]
 data[geographicAreaM49 %in% EU_countries, region := "European Union"]
 data[!geographicAreaM49 %in% c(840, EU_countries), region := "Others countries"]
 
-# Coefficients for USA and cereals
-data[itemGroup == "cereals" & region == "United States of America",
-     closingStocksEstimated :=  coefficients_cereals_pulses[names_coef == "(Intercept)", coef] +
-       coefficients_cereals_pulses[names_coef == "totalSupply", coef] * totalSupply +
-       coefficients_cereals_pulses[names_coef == "totalSupply:regionUnited States of America", coef] * totalSupply]
+data <- cbind(data, coefficients_cereals_pulses, coefficients_sugar)
 
+data[,
+  closingStocksEstimated :=
+    dplyr::case_when(
+      # Cereals
+      itemGroup == "cereals" & region == "European Union" ~
+        coef_pc_intercept + coef_pc_supply * totalSupply,
+      itemGroup == "cereals" & region == "United States of America" ~
+        coef_pc_intercept + coef_pc_supply * totalSupply + coef_pc_usa * totalSupply,
+      itemGroup == "cereals" & region == "Others countries" ~
+        coef_pc_intercept + coef_pc_supply * totalSupply + coef_pc_others * totalSupply,
+      # Pulses
+      itemGroup == "pulses" & region == "European Union" ~
+        coef_pc_intercept + coef_pc_supply * totalSupply + coef_pc_pulses * totalSupply,
+      itemGroup == "pulses" & region == "United States of America" ~
+        coef_pc_intercept + coef_pc_supply * totalSupply + coef_pc_usa * totalSupply + coef_pc_pulses * totalSupply,
+      itemGroup == "pulses" & region == "Others countries" ~
+        coef_pc_intercept + coef_pc_supply * totalSupply + coef_pc_others * totalSupply + coef_pc_pulses * totalSupply,
+      # Refined sugar
+      # XXX: in the original code "developing" is actually used
+      itemGroup == "refined_sugar" & region == "Others countries" & incomeGroup %in% c("Lower middle income", "Low income") ~
+        coef_su_supply * totalSupply,
+      itemGroup == "refined_sugar" & !(region == "Others countries" & incomeGroup %in% c("Lower middle income", "Low income")) ~
+        coef_su_supply * totalSupply + coef_su_developing * totalSupply
+    )
+]
 
-# coefficients for USA and pulses
-data[itemGroup == "pulses" & region == "United States of America",
-     closingStocksEstimated :=  coefficients_cereals_pulses[names_coef == "(Intercept)", coef] +
-       coefficients_cereals_pulses[names_coef == "totalSupply", coef] * totalSupply +
-       coefficients_cereals_pulses[names_coef == "totalSupply:regionUnited States of America", coef] * totalSupply +
-       coefficients_cereals_pulses[names_coef == "totalSupply:typepulses", coef] * totalSupply]
-
-
-# coefficients for USA and refined_sugar
-data[itemGroup == "refined_sugar" & region == "United States of America",
-     closingStocksEstimated :=  coefficients_sugar[names_coef == "supply", coef] * totalSupply +
-       coefficients_sugar[names_coef == "supply:country_groupdeveloping", coef] * totalSupply]
-
-# coefficients for EU and cereals
-data[itemGroup == "cereals" & region == "European Union",
-     closingStocksEstimated := coefficients_cereals_pulses[names_coef == "(Intercept)", coef] +
-       coefficients_cereals_pulses[names_coef == "totalSupply", coef] * totalSupply]
-
-# coefficients for EU and pulses
-data[itemGroup == "pulses" & region == "European Union",
-     closingStocksEstimated := coefficients_cereals_pulses[names_coef == "(Intercept)", coef] +
-       coefficients_cereals_pulses[names_coef == "totalSupply", coef] * totalSupply +
-       coefficients_cereals_pulses[names_coef == "totalSupply:typepulses", coef] * totalSupply]
-
-# coefficients for EU and refined_sugar
-data[itemGroup == "refined_sugar" & region == "European Union",
-     closingStocksEstimated := coefficients_sugar[names_coef == "supply", coef] * totalSupply +
-       coefficients_sugar[names_coef == "supply:country_groupdeveloping", coef] * totalSupply]
-
-# coefficients for other countries and cereals
-data[itemGroup == "cereals" & region == "Others countries",
-     closingStocksEstimated := coefficients_cereals_pulses[names_coef == "(Intercept)", coef] +
-       coefficients_cereals_pulses[names_coef == "totalSupply", coef] * totalSupply +
-       coefficients_cereals_pulses[names_coef == "totalSupply:regionOthers countries", coef] * totalSupply]
-
-# coefficients for other countries and pulses
-data[itemGroup == "pulses" & region == "Others countries",
-     closingStocksEstimated := coefficients_cereals_pulses[names_coef == "(Intercept)", coef] +
-       coefficients_cereals_pulses[names_coef == "totalSupply", coef] * totalSupply +
-       coefficients_cereals_pulses[names_coef == "totalSupply:regionOthers countries", coef] * totalSupply +
-       coefficients_cereals_pulses[names_coef == "totalSupply:typepulses", coef] * totalSupply]
-
-# coefficients for other countries with "lower middle and low income" and refined_sugar
-data[itemGroup == "refined_sugar" & region == "Others countries" &
-       incomeGroup %in% c("Lower middle income", "Low income"),
-     closingStocksEstimated := coefficients_sugar[names_coef == "supply", coef] * totalSupply]
-
-# coefficients for other countries with "upper middle and high income" and refined_sugar
-data[itemGroup == "refined_sugar" & region == "Others countries" &
-       incomeGroup %in% c("Upper middle income", "High income"),
-     closingStocksEstimated := coefficients_sugar[names_coef == "supply", coef] * totalSupply +
-       coefficients_sugar[names_coef == "supply:country_groupdeveloping", coef] * totalSupply]
+data <- dplyr::select(data, -dplyr::starts_with('coef_'))
 
 ## Opening Stocks computed from delta stocks as a cumulated sum
 tabOpeningStocksFromDelta <- computeOpeningStocksfromDelta(minYearToProcess)
