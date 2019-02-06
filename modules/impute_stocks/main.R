@@ -39,7 +39,7 @@ if(CheckDebug()){
 minYearToProcess <- as.numeric(ifelse(is.null(swsContext.computationParams$minYearToProcess), "1990",
                                       swsContext.computationParams$minYearToProcess))
 
-maxYearToProcess <- as.numeric(ifelse(is.null(swsContext.computationParams$maxYearToProcess), "2016",
+maxYearToProcess <- as.numeric(ifelse(is.null(swsContext.computationParams$maxYearToProcess), "2017",
                                       swsContext.computationParams$maxYearToProcess))
 
 if(minYearToProcess > maxYearToProcess | maxYearToProcess < minYearToProcess) 
