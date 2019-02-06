@@ -131,6 +131,7 @@ keyOpening@dimensions$measuredElement@keys = "5113"
 keyOpening@dimensions$timePointYears@keys = as.character(minYearToProcess:(maxYearToProcess))
 
 openingStockData <- GetData(keyOpening)
+
 setnames(openingStockData, "Value", "openingStocks")
 openingStockData[flagObservationStatus == "M" & flagMethod == "-", flagMethod := "u"]
 
@@ -196,14 +197,10 @@ keyNewTrade@dataset = "total_trade_cpc_m49"
 totalTradeData <- GetData(keyNewTrade, flags = FALSE)
 
 totalTradeData <- dcast.data.table(totalTradeData, geographicAreaM49 + measuredItemCPC +
-                                        timePointYears ~ measuredElementTrade, value.var = "Value")
+                                        timePointYears ~ measuredElementTrade, value.var = "Value", fill = 0)
 
 setnames(totalTradeData, old=c("5610", "5910"),
          new = c("imports", "exports"))
-
-totalTradeData[is.na(imports), imports := 0]
-totalTradeData[is.na(exports), exports := 0]
-totalTradeData[, netTrade := (imports - exports)]
 
 # countryGroup <- fread(system.file("extdata/class.csv", package = "faoswsStock"))
 countryGroup <- ReadDatatable("country_group")
