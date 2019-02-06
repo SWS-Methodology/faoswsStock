@@ -204,14 +204,18 @@ setnames(totalTradeData, old = c("5610", "5910"), new = c("imports", "exports"))
 countryGroup <- ReadDatatable("country_group")
 
 countryIncomeGroup <- countryGroup[group_code %in% c("HIC", "LIC", "UMC", "LMC"), ]
+
 countryIncomeGroup[, geographicAreaM49 := as.character(countrycode(country_code, "wb", "iso3n"))]
 
 # Sudan has the wrong name (it should be former Sudan)
 countryIncomeGroup[geographicAreaM49 == "736", country_name := "Sudan (former)"]
+
 # China should be 1248
 countryIncomeGroup[geographicAreaM49 == "156", geographicAreaM49 := "1248"]
+
 #Exclude Channel Islands and Kosovo (not separately recognised by the UN)
 countryIncomeGroup <- countryIncomeGroup[!is.na(geographicAreaM49)]
+
 setnames(countryIncomeGroup, "group_name", "incomeGroup")
 
 ## Merge Stocks, Production, Total Trade and Income
@@ -223,26 +227,9 @@ data <- merge(data, totalTradeData[, c(keys, "imports"), with = FALSE],
               by = keys, all = T)
 
 ## Expand data for maxYearToProcess + 1
-nextYearData <- as.data.table(expand.grid(geographicAreaM49 = as.character(unique(data$geographicAreaM49)),
-                                          measuredItemCPC = unique(data$measuredItemCPC),
-                                          timePointYears = as.character(maxYearToProcess + 1),
-                                          flagObservationStatus_5071 = NA,
-                                          flagMethod_5071 = NA,
-                                          measuredElemet = NA,
-                                          deltaStocks = NA,
-                                          Valid = NA,
-                                          Protected = NA,
-                                          production = NA,
-                                          imports = NA))
+nextYearData <- data[, .SD[timePointYears == maxYearToProcess], by = .(geographicAreaM49, measuredItemCPC)]
 
-nextYearData[, `:=` (geographicAreaM49 = as.character(geographicAreaM49),
-                     measuredItemCPC = as.character(measuredItemCPC),
-                     timePointYears = as.character(timePointYears),
-                     flagObservationStatus_5071 = as.character(flagObservationStatus_5071),
-                     measuredElemet = as.character(measuredElemet),
-                     deltaStocks = as.numeric(deltaStocks),
-                     production = as.numeric(production),
-                     imports = as.numeric(imports))]
+nextYearData[, setdiff(names(x), c('geographicAreaM49', 'measuredItemCPC', 'timePointYears')) := NA]
 
 # Combine with the data
 data <- rbind(data, nextYearData, fill = T)
