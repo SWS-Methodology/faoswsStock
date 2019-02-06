@@ -45,6 +45,11 @@ maxYearToProcess <- as.numeric(ifelse(is.null(swsContext.computationParams$maxYe
 if(minYearToProcess > maxYearToProcess | maxYearToProcess < minYearToProcess)
   stop("Please check the time range for the years to be processed")
 
+# M49 codes of EU countries
+EU_countries <- c(40, 56, 100, 196, 203, 208, 233, 246, 250, 276,
+                  300, 348, 372, 380, 428, 440, 442, 470, 528, 616,
+                  620, 642, 703, 705, 724, 752, 826)
+
 ################################################################################
 ##' Obtain computation parameter, this parameter determines whether only
 ##' selected session should be validated or the complete domain.
@@ -279,15 +284,8 @@ data <- data[!is.na(incomeGroup)]
 
 # Region: US, EU and others
 data[geographicAreaM49 == 840, region := "United States of America"]
-data[geographicAreaM49 %in% c(40, 56, 100, 196, 203, 208, 233, 246, 250, 276,
-                              300, 348, 372, 380, 428, 440, 442, 470, 528, 616,
-                              620, 642, 703, 705, 724, 752, 826),
-     region := "European Union"]
-
-data[!geographicAreaM49 %in% c(40, 56, 100, 196, 203, 208, 233, 246, 250, 276,
-                               300, 348, 372, 380, 428, 440, 442, 470, 528, 616,
-                               620, 642, 703, 705, 724, 752, 826, 840),
-     region := "Others countries"]
+data[geographicAreaM49 %in% EU_countries, region := "European Union"]
+data[!geographicAreaM49 %in% c(840, EU_countries), region := "Others countries"]
 
 # Coefficients for USA and cereals
 data[itemGroup == "cereals" & region == "United States of America",
