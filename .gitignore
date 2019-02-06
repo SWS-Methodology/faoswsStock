@@ -1,7 +1,7 @@
 sandbox/Stocks.docx
 savedModels
 .Rproj.user
-
+*.sw[a-z]
 .Rhistory
 .RData
 modules/impute_stocks/sws.yml
