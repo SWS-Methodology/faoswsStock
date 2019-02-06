@@ -199,24 +199,20 @@ totalTradeData <- GetData(keyNewTrade, flags = FALSE)
 totalTradeData <- dcast.data.table(totalTradeData, geographicAreaM49 + measuredItemCPC +
                                         timePointYears ~ measuredElementTrade, value.var = "Value", fill = 0)
 
-setnames(totalTradeData, old=c("5610", "5910"),
-         new = c("imports", "exports"))
+setnames(totalTradeData, old = c("5610", "5910"), new = c("imports", "exports"))
 
-# countryGroup <- fread(system.file("extdata/class.csv", package = "faoswsStock"))
 countryGroup <- ReadDatatable("country_group")
-setnames(countryGroup, old = c("group_code","group_name","country_code","country_name"),
-         new = c("GroupCode", "GroupName", "CountryCode", "CountryName"))
 
-countryIncomeGroup <- countryGroup[GroupCode %in% c("HIC", "LIC", "UMC", "LMC"), ]
-countryIncomeGroup[, geographicAreaM49 := as.character(countrycode(CountryCode, "wb", "iso3n"))]
+countryIncomeGroup <- countryGroup[group_code %in% c("HIC", "LIC", "UMC", "LMC"), ]
+countryIncomeGroup[, geographicAreaM49 := as.character(countrycode(country_code, "wb", "iso3n"))]
 
 # Sudan has the wrong name (it should be former Sudan)
-countryIncomeGroup[geographicAreaM49 == "736", CountryName := "Sudan (former)"]
+countryIncomeGroup[geographicAreaM49 == "736", country_name := "Sudan (former)"]
 # China should be 1248
 countryIncomeGroup[geographicAreaM49 == "156", geographicAreaM49 := "1248"]
 #Exclude Channel Islands and Kosovo (not separately recognised by the UN)
 countryIncomeGroup <- countryIncomeGroup[!is.na(geographicAreaM49)]
-setnames(countryIncomeGroup, "GroupName", "incomeGroup")
+setnames(countryIncomeGroup, "group_name", "incomeGroup")
 
 ## Merge Stocks, Production, Total Trade and Income
 keys <- c("geographicAreaM49", "measuredItemCPC", "timePointYears")
