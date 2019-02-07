@@ -378,6 +378,9 @@ data[is.na(Protected), Protected := FALSE]
 data[is.na(Protected_5113), Protected_5113 := FALSE]
 data[is.na(flagdeltaStocksBasedonOpening_5113), flagdeltaStocksBasedonOpening_5113 := 0]
 
+# XXX: the conditions below seem contradictory, e.g., Protected == TRUE
+# will overwrite some of the figures of condition flagdeltaStocksBasedonOpening_5113 == 1
+
 ## Updating delta stocks
 data[Protected == FALSE & flagdeltaStocksBasedonOpening_5113 == 0,
      deltaStocksUpdated := deltaStocksEstimated]
@@ -407,11 +410,9 @@ data[Protected == FALSE & flagdeltaStocksBasedonOpening_5113 == 0 & Protected_51
 
 ## From the combination of minFlag and maxFlag is easy to detect if the country/item
 ## has just official data, or just unofficial or a mixture.
-data[, minFlag := min(protectedFlag),
-     by = list(geographicAreaM49, measuredItemCPC)]
+data[, minFlag := min(protectedFlag), .(geographicAreaM49, measuredItemCPC)]
 
-data[, maxFlag := max(protectedFlag),
-     by = list(geographicAreaM49, measuredItemCPC)]
+data[, maxFlag := max(protectedFlag), .(geographicAreaM49, measuredItemCPC)]
 
 data[maxFlag == 0 & minFlag == 0, flagMix := "unofficial"]
 data[maxFlag == 1 & minFlag == 1, flagMix := "official"]
@@ -444,37 +445,28 @@ setnames(onlyUnofficialFigures, "value", "Value")
 
 if (nrow(onlyUnofficialFigures) > 0) {
   # flags for delta stock
-  onlyUnofficialFigures[measuredElement == "5071" &
-                            (Protected == FALSE | flagdeltaStocksBasedonOpening_5113 == 0),
-                          flagObservationStatus := "I"]
-
-  onlyUnofficialFigures[measuredElement == "5071" &
-                            (Protected == FALSE | flagdeltaStocksBasedonOpening_5113 == 0),
-                          flagMethod := "i"]
+  onlyUnofficialFigures[
+    measuredElement == "5071" & (Protected == FALSE | flagdeltaStocksBasedonOpening_5113 == 0),
+    `:=`(flagObservationStatus = "I", flagMethod = "i")
+    ]
 
   # opening flags
 
-  onlyUnofficialFigures[measuredElement == "5113" & Protected_5113 == FALSE,
-                          flagObservationStatus := "I"]
+  onlyUnofficialFigures[
+    Protected_5113 == FALSE & measuredElement == "5113",
+    `:=`(flagObservationStatus = "I", flagMethod = "e")
+    ]
 
-  onlyUnofficialFigures[measuredElement == "5113" & Protected_5113 == TRUE,
-                          flagObservationStatus := ""]
-
-  onlyUnofficialFigures[measuredElement == "5113" & Protected_5113 == FALSE,
-                          flagMethod := "e"]
-
-  onlyUnofficialFigures[measuredElement == "5113" & Protected_5113 == TRUE,
-                          flagMethod := flagMethod_5113]
+  onlyUnofficialFigures[
+    Protected_5113 == TRUE & measuredElement == "5113",
+    `:=`(flagObservationStatus = "", flagMethod = flagMethod_5113)
+    ]
 
   onlyUnofficialFigures <- onlyUnofficialFigures[, c("timePointYears", "geographicAreaM49",
                                                      "measuredItemCPC", "measuredElement",
                                                      "Value", "flagObservationStatus",
                                                      "flagMethod", "flagMix"), with = FALSE]
 
-  setcolorder(onlyUnofficialFigures, c("timePointYears", "geographicAreaM49",
-                                       "measuredItemCPC", "measuredElement",
-                                       "Value", "flagObservationStatus",
-                                       "flagMethod", "flagMix"))
 } else {
   onlyUnofficialFigures[, `:=` (flagObservationStatus = NA,
                                 measuredElement = NA,
@@ -485,11 +477,12 @@ if (nrow(onlyUnofficialFigures) > 0) {
                                                                    "Value", "flagObservationStatus",
                                                                    "flagMethod", "flagMix"), with = FALSE]
 
-  setcolorder(onlyUnofficialFigures, c("timePointYears", "geographicAreaM49",
-                                              "measuredItemCPC", "measuredElement",
-                                              "Value", "flagObservationStatus",
-                                              "flagMethod", "flagMix"))
 }
+
+setcolorder(onlyUnofficialFigures, c("timePointYears", "geographicAreaM49",
+                                     "measuredItemCPC", "measuredElement",
+                                     "Value", "flagObservationStatus",
+                                     "flagMethod", "flagMix"))
 
 ## Only official figures
 onlyOfficialFigures <- data[flagMix == "official"]
@@ -530,27 +523,22 @@ if (nrow(onlyOfficialFigures) > 1) {
   onlyOfficialFigures[variable == "openingStocksUpdated", measuredElement := "5113"]
 
   # flags for delta stocks
-  onlyOfficialFigures[measuredElement == "5071" & Protected == FALSE,
-                        flagObservationStatus := "I"]
+  onlyOfficialFigures[
+    Protected == FALSE & measuredElement == "5071",
+    `:=`(flagObservationStatus = "I", flagMethod = "i")
+  ]
 
-  onlyOfficialFigures[measuredElement == "5071" & Protected == TRUE,
-                        flagObservationStatus := flagObservationStatus_5071]
-
-  onlyOfficialFigures[measuredElement == "5071" & Protected == FALSE,
-                        flagMethod := "i"]
-
-  onlyOfficialFigures[measuredElement == "5071" & Protected == TRUE,
-                        flagMethod := flagMethod_5071]
-
+  onlyOfficialFigures[
+    Protected == TRUE & measuredElement == "5071",
+    `:=`(flagObservationStatus = flagObservationStatus_5071, flagMethod = flagMethod_5071)
+  ]
 
   # flags for opening stocks
 
-  onlyOfficialFigures[measuredElement == "5113" & Protected_5113 == TRUE,
-                        flagObservationStatus := flagObservationStatus_5113]
-
-
-  onlyOfficialFigures[measuredElement == "5113" & Protected_5113 == TRUE,
-                        flagMethod := flagMethod_5113]
+  onlyOfficialFigures[
+    Protected_5113 == TRUE & measuredElement == "5113",
+    `:=`(flagObservationStatus = flagObservationStatus_5113, flagMethod = flagMethod_5113)
+  ]
 
   onlyOfficialFigures[, c("flagObservationStatus_5071", "flagMethod_5071", "Protected",
                             "flagObservationStatus_5113", "flagMethod_5113",
@@ -559,10 +547,6 @@ if (nrow(onlyOfficialFigures) > 1) {
 
   setnames(onlyOfficialFigures, "value", "Value")
 
-  setcolorder(onlyOfficialFigures, c("timePointYears", "geographicAreaM49",
-                                       "measuredItemCPC", "measuredElement",
-                                       "Value", "flagObservationStatus",
-                                       "flagMethod", "flagMix"))
 } else {
 
   onlyOfficialFigures[, `:=` (Value = NA,
@@ -574,11 +558,12 @@ if (nrow(onlyOfficialFigures) > 1) {
                                                  "Value", "flagObservationStatus",
                                                  "flagMethod", "flagMix"), with = FALSE]
 
-  setcolorder(onlyOfficialFigures, c("timePointYears", "geographicAreaM49",
-                                     "measuredItemCPC", "measuredElement",
-                                     "Value", "flagObservationStatus",
-                                     "flagMethod", "flagMix"))
 }
+
+setcolorder(onlyOfficialFigures, c("timePointYears", "geographicAreaM49",
+                                   "measuredItemCPC", "measuredElement",
+                                   "Value", "flagObservationStatus",
+                                   "flagMethod", "flagMix"))
 
 ## For the data that has at least one official row we have to compute the opening
 ## stocks based on the deltaStocksUpdatedCummulated.
@@ -695,32 +680,27 @@ if (nrow(mixOfficialUnofficialFigures) > 1) {
                                                   measure.vars = c("deltaStocksUpdatedFinal", "openingFinal"))
 
   # Flags for delta stocks
-  mixOfficialUnofficialFigures[Protected == TRUE & variable == "deltaStocksUpdatedFinal",
-                               flagObservationStatus := flagObservationStatus_5071]
+  mixOfficialUnofficialFigures[
+    Protected == TRUE & variable == "deltaStocksUpdatedFinal",
+    `:=`(flagObservationStatus = flagObservationStatus_5071, flagMethod = flagMethod_5071)
+  ]
 
-  mixOfficialUnofficialFigures[Protected == FALSE & variable == "deltaStocksUpdatedFinal",
-                               flagObservationStatus := "I"]
-
-  mixOfficialUnofficialFigures[Protected == TRUE & variable == "deltaStocksUpdatedFinal",
-                               flagMethod := flagMethod_5071]
-
-  mixOfficialUnofficialFigures[Protected == FALSE & variable == "deltaStocksUpdatedFinal",
-                               flagMethod := "i"]
+  mixOfficialUnofficialFigures[
+    Protected == FALSE & variable == "deltaStocksUpdatedFinal",
+    `:=`(flagObservationStatus = "I", flagMethod = "i")
+  ]
 
   # Flags for opening stocks
 
-  mixOfficialUnofficialFigures[Protected_5113 == TRUE & variable == "openingFinal",
-                               flagObservationStatus := flagObservationStatus_5113]
+  mixOfficialUnofficialFigures[
+    Protected_5113 == TRUE & variable == "openingFinal",
+    `:=`(flagObservationStatus = flagObservationStatus_5113, flagMethod = flagMethod_5113)
+  ]
 
-  mixOfficialUnofficialFigures[Protected_5113 == FALSE & variable == "openingFinal",
-                               flagObservationStatus := "I"]
-
-  mixOfficialUnofficialFigures[Protected_5113 == TRUE & variable == "openingFinal",
-                               flagMethod := flagMethod_5113]
-
-  mixOfficialUnofficialFigures[Protected_5113 == FALSE & variable == "openingFinal",
-                               flagMethod := "e"]
-
+  mixOfficialUnofficialFigures[
+    Protected_5113 == FALSE & variable == "openingFinal",
+    `:=`(flagObservationStatus = "I", flagMethod = "e")
+  ]
 
   mixOfficialUnofficialFigures[variable == "deltaStocksUpdatedFinal", measuredElement := "5071"]
   mixOfficialUnofficialFigures[variable == "openingFinal", measuredElement := "5113"]
@@ -734,10 +714,6 @@ if (nrow(mixOfficialUnofficialFigures) > 1) {
 
   setnames(mixOfficialUnofficialFigures, "value", "Value")
 
-  setcolorder(mixOfficialUnofficialFigures, c("timePointYears", "geographicAreaM49",
-                                              "measuredItemCPC", "measuredElement",
-                                              "Value", "flagObservationStatus",
-                                              "flagMethod", "flagMix"))
 } else {
 
   mixOfficialUnofficialFigures[, `:=` (timePointYears = NA,
@@ -750,11 +726,12 @@ if (nrow(mixOfficialUnofficialFigures) > 1) {
                                                  "Value", "flagObservationStatus",
                                                  "flagMethod", "flagMix"), with = FALSE]
 
-  setcolorder(mixOfficialUnofficialFigures, c("timePointYears", "geographicAreaM49",
-                                     "measuredItemCPC", "measuredElement",
-                                     "Value", "flagObservationStatus",
-                                     "flagMethod", "flagMix"))
 }
+
+setcolorder(mixOfficialUnofficialFigures, c("timePointYears", "geographicAreaM49",
+                                            "measuredItemCPC", "measuredElement",
+                                            "Value", "flagObservationStatus",
+                                            "flagMethod", "flagMix"))
 
 ## Now we can combine the official and unofficial data sets again in order to
 ## save the data set to SWS.
