@@ -479,11 +479,6 @@ if (nrow(onlyUnofficialFigures) > 0) {
 
 }
 
-setcolorder(onlyUnofficialFigures, c("timePointYears", "geographicAreaM49",
-                                     "measuredItemCPC", "measuredElement",
-                                     "Value", "flagObservationStatus",
-                                     "flagMethod", "flagMix"))
-
 ## Only official figures
 onlyOfficialFigures <- data[flagMix == "official"]
 
@@ -558,11 +553,6 @@ if (nrow(onlyOfficialFigures) > 1) {
                                                  "flagMethod", "flagMix"), with = FALSE]
 
 }
-
-setcolorder(onlyOfficialFigures, c("timePointYears", "geographicAreaM49",
-                                   "measuredItemCPC", "measuredElement",
-                                   "Value", "flagObservationStatus",
-                                   "flagMethod", "flagMix"))
 
 ## For the data that has at least one official row we have to compute the opening
 ## stocks based on the deltaStocksUpdatedCummulated.
@@ -725,17 +715,17 @@ if (nrow(mixOfficialUnofficialFigures) > 1) {
 
 }
 
-setcolorder(mixOfficialUnofficialFigures, c("timePointYears", "geographicAreaM49",
-                                            "measuredItemCPC", "measuredElement",
-                                            "Value", "flagObservationStatus",
-                                            "flagMethod", "flagMix"))
-
 ## Now we can combine the official and unofficial data sets again in order to
 ## save the data set to SWS.
 
 
-dataToSave <- rbindlist(list(onlyUnofficialFigures, mixOfficialUnofficialFigures, onlyOfficialFigures),
-                        fill = T)
+dataToSave <- rbind(onlyUnofficialFigures, mixOfficialUnofficialFigures, onlyOfficialFigures, fill = TRUE)
+
+setcolorder(dataToSave, c("timePointYears", "geographicAreaM49",
+                          "measuredItemCPC", "measuredElement",
+                          "Value", "flagObservationStatus",
+                          "flagMethod", "flagMix"))
+
 dataToSave <- nameData("Stock", "stocksdata", dataToSave)
 
 ## Delta Stocks
