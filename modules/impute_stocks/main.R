@@ -436,12 +436,12 @@ onlyUnofficialFigures <- melt.data.table(
                 "flagObservationStatus_5071", "flagMethod_5071", "Protected",
                 "flagObservationStatus_5113", "flagMethod_5113", "Protected_5113",
                 "flagdeltaStocksBasedonOpening_5113", "flagMix"),
-    measure.vars = c("deltaStocks", "openingStocks"))
+    measure.vars = c("deltaStocks", "openingStocks"),
+    value.name = "Value")
 
 onlyUnofficialFigures[variable == "deltaStocks", measuredElement := "5071"]
 onlyUnofficialFigures[variable == "openingStocks", measuredElement := "5113"]
 onlyUnofficialFigures[, c("variable") := NULL]
-setnames(onlyUnofficialFigures, "value", "Value")
 
 if (nrow(onlyUnofficialFigures) > 0) {
   # flags for delta stock
@@ -516,7 +516,8 @@ if (nrow(onlyOfficialFigures) > 1) {
                   "flagObservationStatus_5071", "flagMethod_5071", "Protected",
                   "flagObservationStatus_5113", "flagMethod_5113", "Protected_5113",
                   "flagdeltaStocksBasedonOpening_5113", "flagMix"),
-      measure.vars = c("deltaStocksUpdated", "openingStocksUpdated"))
+      measure.vars = c("deltaStocksUpdated", "openingStocksUpdated"),
+      value.name = "Value")
 
 
   onlyOfficialFigures[variable == "deltaStocksUpdated", measuredElement := "5071"]
@@ -544,8 +545,6 @@ if (nrow(onlyOfficialFigures) > 1) {
                             "flagObservationStatus_5113", "flagMethod_5113",
                             "Protected_5113", "flagdeltaStocksBasedonOpening_5113",
                             "variable") := NULL]
-
-  setnames(onlyOfficialFigures, "value", "Value")
 
 } else {
 
@@ -677,7 +676,8 @@ if (nrow(mixOfficialUnofficialFigures) > 1) {
                                                               "flagMethod_5113",
                                                               "protectedFlag", "minFlag",
                                                               "maxFlag", "flagMix", "flagProtectComb"),
-                                                  measure.vars = c("deltaStocksUpdatedFinal", "openingFinal"))
+                                                  measure.vars = c("deltaStocksUpdatedFinal", "openingFinal"),
+                                                  value.name = "Value")
 
   # Flags for delta stocks
   mixOfficialUnofficialFigures[
@@ -711,9 +711,6 @@ if (nrow(mixOfficialUnofficialFigures) > 1) {
                                    "flagObservationStatus_5113", "flagMethod_5113",
                                    "protectedFlag", "minFlag", "maxFlag",
                                    "variable", "flagProtectComb") := NULL]
-
-  setnames(mixOfficialUnofficialFigures, "value", "Value")
-
 } else {
 
   mixOfficialUnofficialFigures[, `:=` (timePointYears = NA,
