@@ -1,0 +1,16 @@
+current: production
+all:
+  share: /media/share
+qa:
+  certdir:  C:/Users/Giulia/Documents/.R/qa
+  server:  https://hqlqasws1.hq.un.fao.org:8181/sws/ 
+  token:   c5dc947b-fc51-4d7b-8a94-fc7431fd5cee
+production:
+  certdir: C:/Users/Giulia/Documents/.R/Production
+  server: https://sws.fao.org
+  token:  afc182e2-1ef3-4e4a-a4fe-d4310a46cda1
+ea:
+  certdir: C:/Users/piva/Documents/.R/QA
+  server: https://hqlqasws1.hq.un.fao.org:9454/sws
+  token: 30078ecf-1c34-4730-9fc3-88158fdfa02f
+
